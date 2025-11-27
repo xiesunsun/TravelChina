@@ -1,3 +1,8 @@
+# env
+.env
+.env.local
+.env.*
+
 # Logs
 logs
 *.log
@@ -6,11 +11,23 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
-
+.idea/
+.vscode/
+*.tsbuildinfo
 node_modules
 dist
 dist-ssr
 *.local
+#backend
+__pycache__/
+*.py[cod]
+*$py.class
+# virtual env
+venv/
+env/
+.venv/
+.Python
+
 
 # Editor directories and files
 .vscode/*

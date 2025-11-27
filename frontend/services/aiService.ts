@@ -59,19 +59,19 @@ const FALLBACK_MESSAGES: Record<QuestionType, string[]> = {
 function getRandomFallback(type: QuestionType, context: QuestionContext): string {
   const templates = FALLBACK_MESSAGES[type];
   const template = templates[Math.floor(Math.random() * templates.length)];
-  
+
   // Simple variable replacement
   let result = template;
   if (context.region) result = result.replace(/{region}/g, context.region);
   else result = result.replace(/{region}/g, '那里');
-  
+
   if (context.city) result = result.replace(/{city}/g, context.city);
-  
+
   return result;
 }
 
 export const generateQuestion = async (
-  type: QuestionType, 
+  type: QuestionType,
   context: QuestionContext
 ): Promise<string> => {
   // If no AI client, return fallback immediately
@@ -80,7 +80,7 @@ export const generateQuestion = async (
   }
 
   try {
-    const model = 'gemini-2.5-flash';
+    const model = 'gemini-2.5-flash-lite';
     let prompt = '';
 
     switch (type) {
@@ -106,7 +106,7 @@ export const generateQuestion = async (
       contents: prompt,
       config: {
         systemInstruction: SYSTEM_INSTRUCTION,
-        temperature: 1.1, 
+        temperature: 1.1,
       }
     });
 
