@@ -1,0 +1,26 @@
+# --- Python 通用 ---
+__pycache__/
+*.py[cod]
+
+# --- 敏感信息 (绝对不能漏) ---
+.env
+.env.*
+
+# --- 虚拟环境 (uv 创建的) ---
+.venv/
+venv/
+ENV/
+
+# --- 数据库 (本地测试用的，不要传云端) ---
+*.db
+*.sqlite
+*.sqlite3
+
+# --- 各种 IDE 配置 ---
+.vscode/
+.idea/
+.DS_Store
+
+# --- uv / pyenv ---
+# 注意：pyproject.toml 和 uv.lock 需要提交！不要写在这里！
+# .python-version 可以提交，也可以忽略，建议提交
