@@ -5,19 +5,20 @@ import InkMap from './components/InkMap';
 import ScrollList from './components/ScrollList';
 import RecordModal from './components/RecordModal';
 import { TravelRecord } from './types';
-import { loadRecords, saveRecords } from './services/storageService';
+import { fetchRecords, createRecord, updateRecord, uploadImage, deleteRecord } from './services/apiService';
 import { MapPin, ScrollText } from 'lucide-react';
 
 const Navigation = () => {
   const location = useLocation();
-  
+
   const isActive = (path: string) => location.pathname === path;
   const linkClass = (path: string) => `
     flex items-center gap-2 px-4 py-2 rounded-full transition-all duration-500 border
-    ${isActive(path) 
-      ? 'bg-cinnabar text-paper shadow-md border-cinnabar' 
-      : 'bg-paper/80 text-ink border-indigo/20 hover:bg-indigo/5 hover:border-indigo/40'}
-  `;
+    ${isActive(path)
+      ? 'bg-cinnabar text-paper shadow-md border-cinnabar'
+      : 'bg-paper/80 text-ink border-indigo/20 hover:bg-indigo/5 hover:border-indigo/40'
+    }
+`;
 
   return (
     <nav className="fixed top-8 right-8 z-50 flex gap-4 pointer-events-none">
@@ -26,7 +27,7 @@ const Navigation = () => {
           <MapPin size={18} strokeWidth={1.5} />
           <span className="text-sm font-bold font-serif tracking-widest">舆图</span>
         </Link>
-        
+
         <Link to="/list" className={linkClass('/list')}>
           <ScrollText size={18} strokeWidth={1.5} />
           <span className="text-sm font-bold font-serif tracking-widest">画卷</span>
@@ -56,27 +57,81 @@ const AppContent = () => {
   const [records, setRecords] = useState<TravelRecord[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedLocation, setSelectedLocation] = useState('');
+  const [selectedRecords, setSelectedRecords] = useState<TravelRecord[]>([]);
   const [isFirstVisit, setIsFirstVisit] = useState(true);
 
   useEffect(() => {
-    const data = loadRecords();
-    setRecords(data);
+    const initData = async () => {
+      const apiData = await fetchRecords();
+      setRecords(apiData);
+    };
+    initData();
   }, []);
 
-  const handleSaveRecord = (record: TravelRecord) => {
-    const updated = [record, ...records];
-    setRecords(updated);
-    saveRecords(updated);
-    setIsModalOpen(false);
-    setSelectedLocation('');
+  const handleSaveRecord = async (record: TravelRecord) => {
+    try {
+      // Check if this is an update or a new record
+      const existingIndex = records.findIndex(r => r.id === record.id);
+
+      if (existingIndex >= 0) {
+        // Update existing
+        const updatedRecord = await updateRecord(record.id, record);
+        setRecords(prev => {
+          const newRecords = [...prev];
+          newRecords[existingIndex] = updatedRecord;
+          return newRecords;
+        });
+
+        // Update selectedRecords if relevant
+        if (selectedLocation === updatedRecord.region) {
+          setSelectedRecords(prev => {
+            const idx = prev.findIndex(r => r.id === updatedRecord.id);
+            if (idx >= 0) {
+              const newSelected = [...prev];
+              newSelected[idx] = updatedRecord;
+              return newSelected;
+            }
+            return prev;
+          });
+        }
+      } else {
+        // Create new
+        const newRecord = await createRecord(record);
+        setRecords(prev => [newRecord, ...prev]);
+
+        // Update selectedRecords if relevant
+        if (selectedLocation === newRecord.region) {
+          setSelectedRecords(prev => [newRecord, ...prev]);
+        }
+      }
+
+      setIsModalOpen(false);
+      setSelectedLocation('');
+    } catch (error) {
+      console.error("Failed to save:", error);
+      alert("保存失败，请重试");
+    }
+  };
+
+  const handleDeleteRecord = async (id: string) => {
+    try {
+      await deleteRecord(id);
+      setRecords(prev => prev.filter(r => r.id !== id));
+      setSelectedRecords(prev => prev.filter(r => r.id !== id));
+    } catch (error) {
+      console.error("Failed to delete:", error);
+      alert("删除失败，请重试");
+    }
   };
 
   const handleMapClick = useCallback((locationName: string) => {
     // Check if this region already has records
-    const hasVisited = records.some(r => r.region === locationName);
-    
+    const existingRecords = records.filter(r => r.region === locationName);
+    const hasVisited = existingRecords.length > 0;
+
     setIsFirstVisit(!hasVisited);
     setSelectedLocation(locationName);
+    setSelectedRecords(existingRecords);
     setIsModalOpen(true);
   }, [records]);
 
@@ -84,7 +139,7 @@ const AppContent = () => {
     <div className="relative w-full h-screen overflow-hidden flex flex-col">
       <Header />
       <Navigation />
-      
+
       <main className="flex-1 relative">
         <Routes>
           <Route path="/" element={<InkMap records={records} onMapClick={handleMapClick} />} />
@@ -95,12 +150,14 @@ const AppContent = () => {
 
       {/* Conditional rendering ensures RecordModal is freshly mounted every time it opens */}
       {isModalOpen && (
-        <RecordModal 
-          isOpen={isModalOpen} 
+        <RecordModal
+          isOpen={isModalOpen}
           initialLocation={selectedLocation}
+          existingRecords={selectedRecords}
           isFirstVisit={isFirstVisit}
-          onClose={() => setIsModalOpen(false)} 
-          onSave={handleSaveRecord} 
+          onClose={() => setIsModalOpen(false)}
+          onSave={handleSaveRecord}
+          onDelete={handleDeleteRecord}
         />
       )}
     </div>

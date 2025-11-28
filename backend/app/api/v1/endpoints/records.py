@@ -95,3 +95,35 @@ def delete_record(
     db.delete(record)
     db.commit()
     return {"ok": True}
+
+# ==========================================
+# 接口 4: 更新足迹
+# PUT /api/v1/records/{record_id}
+# ==========================================
+@router.put("/{record_id}", response_model=TravelRecordRead)
+def update_record(
+    record_id: str,
+    record_in: TravelRecordCreate,
+    db: Session = Depends(get_db),
+    current_user_id: str = Depends(get_fake_user)
+):
+    record = db.query(TravelRecord).filter(
+        TravelRecord.id == record_id,
+        TravelRecord.user_id == current_user_id
+    ).first()
+    
+    if not record:
+        raise HTTPException(status_code=404, detail="Record not found")
+        
+    # 更新字段
+    record.province = record_in.province
+    record.city = record_in.city
+    record.spot_name = record_in.spot_name
+    record.travel_date = record_in.travel_date
+    record.weather = record_in.weather
+    record.thoughts = record_in.thoughts
+    record.images = record_in.images
+    
+    db.commit()
+    db.refresh(record)
+    return record
