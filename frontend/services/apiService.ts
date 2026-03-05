@@ -5,8 +5,13 @@ export const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api/v1';
 
 const AUTH_TOKEN_KEY = 'huixing_auth_token';
-const AUTH_USERNAME_KEY = 'huixing_auth_username';
-const AUTH_PASSWORD_KEY = 'huixing_auth_password';
+
+export class AuthRequiredError extends Error {
+  constructor(message = 'Authentication required') {
+    super(message);
+    this.name = 'AuthRequiredError';
+  }
+}
 
 const getFromStorage = (key: string): string | null => {
   if (typeof window === 'undefined') return null;
@@ -18,39 +23,37 @@ const setToStorage = (key: string, value: string): void => {
   window.localStorage.setItem(key, value);
 };
 
-const randomId = () => {
-  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
-    return crypto.randomUUID().replace(/-/g, '').slice(0, 12);
-  }
-  return `${Date.now()}`;
+const removeFromStorage = (key: string): void => {
+  if (typeof window === 'undefined') return;
+  window.localStorage.removeItem(key);
 };
 
-const ensureAuthToken = async (): Promise<string> => {
-  const cachedToken = getFromStorage(AUTH_TOKEN_KEY);
-  if (cachedToken) return cachedToken;
+interface AuthPayload {
+  username: string;
+  password: string;
+}
 
-  let username = getFromStorage(AUTH_USERNAME_KEY);
-  let password = getFromStorage(AUTH_PASSWORD_KEY);
+interface TokenResponse {
+  access_token: string;
+  token_type: string;
+}
 
-  if (!username) {
-    username = `traveler_${randomId()}`;
-    setToStorage(AUTH_USERNAME_KEY, username);
+const parseErrorDetail = async (
+  response: Response,
+  fallbackMessage: string,
+): Promise<string> => {
+  try {
+    const data = await response.json();
+    if (typeof data?.detail === 'string' && data.detail.trim()) {
+      return data.detail;
+    }
+  } catch {
+    // keep fallback
   }
-  if (!password) {
-    password = `pass_${randomId()}!`;
-    setToStorage(AUTH_PASSWORD_KEY, password);
-  }
+  return fallbackMessage;
+};
 
-  const registerResponse = await fetch(`${API_BASE_URL}/auth/register`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ username, password }),
-  });
-
-  if (!registerResponse.ok && registerResponse.status !== 409) {
-    throw new Error('Failed to bootstrap auth identity');
-  }
-
+const requestToken = async ({ username, password }: AuthPayload): Promise<string> => {
   const loginResponse = await fetch(`${API_BASE_URL}/auth/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -58,17 +61,50 @@ const ensureAuthToken = async (): Promise<string> => {
   });
 
   if (!loginResponse.ok) {
-    throw new Error('Failed to obtain auth token');
+    throw new Error(await parseErrorDetail(loginResponse, 'Failed to obtain auth token'));
   }
 
-  const loginData = await loginResponse.json();
-  const token = loginData.access_token as string;
+  const loginData: TokenResponse = await loginResponse.json();
+  if (!loginData.access_token) {
+    throw new Error('Login succeeded but did not return access token');
+  }
+  return loginData.access_token;
+};
+
+export const hasAuthToken = (): boolean => Boolean(getFromStorage(AUTH_TOKEN_KEY));
+
+export const register = async ({ username, password }: AuthPayload): Promise<void> => {
+  const registerResponse = await fetch(`${API_BASE_URL}/auth/register`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ username, password }),
+  });
+
+  if (!registerResponse.ok) {
+    throw new Error(await parseErrorDetail(registerResponse, 'Failed to register account'));
+  }
+};
+
+export const login = async ({ username, password }: AuthPayload): Promise<void> => {
+  const token = await requestToken({ username, password });
   setToStorage(AUTH_TOKEN_KEY, token);
-  return token;
+};
+
+export const registerAndLogin = async ({ username, password }: AuthPayload): Promise<void> => {
+  await register({ username, password });
+  await login({ username, password });
+};
+
+export const logout = (): void => {
+  removeFromStorage(AUTH_TOKEN_KEY);
 };
 
 const authorizedFetch = async (url: string, init: RequestInit = {}): Promise<Response> => {
-  const token = await ensureAuthToken();
+  const token = getFromStorage(AUTH_TOKEN_KEY);
+  if (!token) {
+    throw new AuthRequiredError();
+  }
+
   const headers = new Headers(init.headers || {});
   headers.set('Authorization', `Bearer ${token}`);
 
@@ -78,12 +114,8 @@ const authorizedFetch = async (url: string, init: RequestInit = {}): Promise<Res
   });
 
   if (response.status === 401) {
-    if (typeof window !== 'undefined') {
-      window.localStorage.removeItem(AUTH_TOKEN_KEY);
-    }
-    const refreshed = await ensureAuthToken();
-    headers.set('Authorization', `Bearer ${refreshed}`);
-    return fetch(url, { ...init, headers });
+    removeFromStorage(AUTH_TOKEN_KEY);
+    throw new AuthRequiredError('Session expired, please login again');
   }
 
   return response;
@@ -100,7 +132,7 @@ export const uploadImage = async (file: File): Promise<string> => {
     });
 
     if (!response.ok) {
-      throw new Error('Image upload failed');
+      throw new Error(await parseErrorDetail(response, 'Image upload failed'));
     }
 
     const data = await response.json();
@@ -121,16 +153,13 @@ export const uploadImages = async (files: File[]): Promise<string[]> => {
 };
 
 export const fetchRecords = async (): Promise<TravelRecord[]> => {
-  try {
-    const response = await authorizedFetch(`${API_BASE_URL}/records/`);
-    if (!response.ok) throw new Error('Failed to fetch records');
-
-    const backendData: BackendRecord[] = await response.json();
-    return backendData.map(toFrontendRecord);
-  } catch (error) {
-    console.error('Fetch API Error', error);
-    return [];
+  const response = await authorizedFetch(`${API_BASE_URL}/records/`);
+  if (!response.ok) {
+    throw new Error(await parseErrorDetail(response, 'Failed to fetch records'));
   }
+
+  const backendData: BackendRecord[] = await response.json();
+  return backendData.map(toFrontendRecord);
 };
 
 export const createRecord = async (record: Omit<TravelRecord, 'id' | 'timestamp'>): Promise<TravelRecord> => {
@@ -142,7 +171,9 @@ export const createRecord = async (record: Omit<TravelRecord, 'id' | 'timestamp'
     body: JSON.stringify(payload),
   });
 
-  if (!response.ok) throw new Error('Failed to create record');
+  if (!response.ok) {
+    throw new Error(await parseErrorDetail(response, 'Failed to create record'));
+  }
 
   const newItem: BackendRecord = await response.json();
   return toFrontendRecord(newItem);
@@ -157,7 +188,9 @@ export const updateRecord = async (id: string, record: Partial<TravelRecord>): P
     body: JSON.stringify(payload),
   });
 
-  if (!response.ok) throw new Error('Failed to update record');
+  if (!response.ok) {
+    throw new Error(await parseErrorDetail(response, 'Failed to update record'));
+  }
 
   const newItem: BackendRecord = await response.json();
   return toFrontendRecord(newItem);
@@ -170,7 +203,7 @@ export const deleteRecord = async (id: string): Promise<void> => {
     });
 
     if (!response.ok) {
-      throw new Error('Failed to delete record');
+      throw new Error(await parseErrorDetail(response, 'Failed to delete record'));
     }
   } catch (error) {
     console.error('Delete Error:', error);
