@@ -1,5 +1,5 @@
 # backend/app/core/config.py
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 from typing import Optional
 
 class Settings(BaseSettings):
@@ -18,10 +18,15 @@ class Settings(BaseSettings):
     # --- AI 配置 ---
     GEMINI_API_KEY: Optional[str] = None
 
-    class Config:
-        # 告诉 Pydantic 去哪里找 .env 文件
-        env_file = ".env"
-        case_sensitive = True
-        extra = "ignore"
+    # --- Auth 配置 ---
+    JWT_SECRET_KEY: str = "dev-only-change-me"
+    JWT_ALGORITHM: str = "HS256"
+    JWT_ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 7
+
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        case_sensitive=True,
+        extra="ignore",
+    )
 
 settings = Settings()

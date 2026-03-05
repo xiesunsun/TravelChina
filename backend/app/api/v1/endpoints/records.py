@@ -1,28 +1,15 @@
 # backend/app/api/v1/endpoints/records.py
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from typing import List
 import uuid
 
-from app.db.session import SessionLocal
+from app.api.deps import get_current_user, get_db
 from app.models.record import TravelRecord
 from app.models.user import User
 from app.schemas.record import TravelRecordCreate, TravelRecordRead
 
 router = APIRouter()
-
-# --- 数据库依赖注入 ---
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
-
-# --- 模拟当前用户 (因为还没写登录，暂时写死一个 UserID) ---
-# 等写了 Auth 模块后，这里会换成 get_current_user
-def get_fake_user():
-    return "user-uuid-123456" # 假设这是你的 ID
 
 # ==========================================
 # 接口 1: 获取足迹列表
@@ -33,10 +20,10 @@ def read_records(
     skip: int = 0, 
     limit: int = 100, 
     db: Session = Depends(get_db),
-    current_user_id: str = Depends(get_fake_user)
+    current_user: User = Depends(get_current_user)
 ):
     records = db.query(TravelRecord)\
-        .filter(TravelRecord.user_id == current_user_id)\
+        .filter(TravelRecord.user_id == current_user.id)\
         .order_by(TravelRecord.travel_date.desc())\
         .offset(skip)\
         .limit(limit)\
@@ -51,12 +38,12 @@ def read_records(
 def create_record(
     record_in: TravelRecordCreate, 
     db: Session = Depends(get_db),
-    current_user_id: str = Depends(get_fake_user)
+    current_user: User = Depends(get_current_user)
 ):
     # 1. 构建数据库模型
     db_record = TravelRecord(
         id=str(uuid.uuid4()), # 生成 UUID
-        user_id=current_user_id,
+        user_id=current_user.id,
         province=record_in.province,
         city=record_in.city,
         spot_name=record_in.spot_name,
@@ -82,11 +69,11 @@ def create_record(
 def delete_record(
     record_id: str,
     db: Session = Depends(get_db),
-    current_user_id: str = Depends(get_fake_user)
+    current_user: User = Depends(get_current_user)
 ):
     record = db.query(TravelRecord).filter(
         TravelRecord.id == record_id,
-        TravelRecord.user_id == current_user_id
+        TravelRecord.user_id == current_user.id
     ).first()
     
     if not record:
@@ -105,11 +92,11 @@ def update_record(
     record_id: str,
     record_in: TravelRecordCreate,
     db: Session = Depends(get_db),
-    current_user_id: str = Depends(get_fake_user)
+    current_user: User = Depends(get_current_user)
 ):
     record = db.query(TravelRecord).filter(
         TravelRecord.id == record_id,
-        TravelRecord.user_id == current_user_id
+        TravelRecord.user_id == current_user.id
     ).first()
     
     if not record:

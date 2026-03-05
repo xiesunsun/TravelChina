@@ -9,10 +9,9 @@ from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-from app.api.v1.endpoints import records
+import app.api.deps as deps
 from app.db.base import Base
 from app.main import app
-from app.models.user import User
 
 SQLALCHEMY_DATABASE_URL = "sqlite:///./test_harness.db"
 
@@ -35,19 +34,34 @@ def override_get_db() -> Generator:
 def reset_db() -> Generator:
     Base.metadata.drop_all(bind=engine)
     Base.metadata.create_all(bind=engine)
-    db = TestingSessionLocal()
-    db.add(User(id="test-user", username="tester", hashed_password="not-used"))
-    db.commit()
-    db.close()
     yield
 
 
 @pytest.fixture
 def client() -> Generator[TestClient, None, None]:
-    app.dependency_overrides[records.get_db] = override_get_db
-    app.dependency_overrides[records.get_fake_user] = lambda: "test-user"
+    app.dependency_overrides[deps.get_db] = override_get_db
 
     with TestClient(app) as api_client:
         yield api_client
 
     app.dependency_overrides.clear()
+
+
+@pytest.fixture
+def auth_headers(client: TestClient) -> dict[str, str]:
+    username = "tester"
+    password = "test-pass-123"
+
+    register_response = client.post(
+        "/api/v1/auth/register",
+        json={"username": username, "password": password},
+    )
+    assert register_response.status_code == 201
+
+    login_response = client.post(
+        "/api/v1/auth/login",
+        json={"username": username, "password": password},
+    )
+    assert login_response.status_code == 200
+    token = login_response.json()["access_token"]
+    return {"Authorization": f"Bearer {token}"}

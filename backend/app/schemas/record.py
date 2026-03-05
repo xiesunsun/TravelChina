@@ -1,5 +1,5 @@
 # backend/app/schemas/record.py
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 from typing import List, Optional
 from datetime import date, datetime
 
@@ -16,7 +16,7 @@ class TravelRecordBase(BaseModel):
     
     # 兼容性处理：前端目前是单图，但后端支持多图
     # 我们定义一个 images 列表，稍后在 API 里把前端的 imageUrl 塞进去
-    images: List[str] = [] 
+    images: List[str] = Field(default_factory=list)
 
 # --- 2. 创建时需要的字段 (Client -> Server) ---
 class TravelRecordCreate(TravelRecordBase):
@@ -32,8 +32,5 @@ class TravelRecordRead(TravelRecordBase):
     updated_at: Optional[datetime]
     
     # AI 标签
-    ai_tags: List[str] = []
-
-    class Config:
-        # 允许 Pydantic 读取 ORM 模型数据
-        from_attributes = True
+    ai_tags: List[str] = Field(default_factory=list)
+    model_config = ConfigDict(from_attributes=True)

@@ -14,8 +14,19 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Docs lint
-        run: bash scripts/doc-lint.sh
+      - uses: astral-sh/setup-uv@v6
+      - name: Install backend deps for generation
+        run: |
+          cd backend
+          uv sync --frozen
+      - name: Generate docs artifacts
+        run: bash scripts/generate-artifacts.sh
+      - name: Docs and architecture lint
+        run: |
+          bash scripts/doc-lint.sh
+          bash scripts/architecture-lint.sh
+      - name: Ensure generated artifacts are committed
+        run: git diff --exit-code docs/generated/openapi.json docs/generated/db-schema.md
 
   backend:
     runs-on: ubuntu-latest
@@ -27,6 +38,8 @@ jobs:
       - uses: astral-sh/setup-uv@v6
       - name: Install backend deps
         run: uv sync --frozen
+      - name: Run AI evals
+        run: uv run --frozen python ../scripts/run_ai_evals.py
       - name: Run backend tests
         run: uv run --frozen --with pytest pytest tests -q
 
@@ -44,5 +57,7 @@ jobs:
           cache-dependency-path: frontend/package-lock.json
       - name: Install frontend deps
         run: npm ci
+      - name: Run frontend tests
+        run: npm test
       - name: Build frontend
         run: npm run build

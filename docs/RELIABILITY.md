@@ -2,6 +2,9 @@
 
 ## Current Guardrails
 - Backend CRUD contract tests.
+- Backend auth and ai/upload API tests.
+- AI eval runner with scored report output.
+- Frontend unit tests (adapter contract).
 - Frontend production build check.
 - CI must pass docs check, backend tests, frontend build.
 

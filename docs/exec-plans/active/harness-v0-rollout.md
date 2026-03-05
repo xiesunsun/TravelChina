@@ -10,4 +10,4 @@ Land harness-first scaffolding without disrupting current feature development.
 - [x] Add backend contract tests for records endpoints.
 - [x] Add CI workflow gates.
 - [ ] Expand with frontend E2E smoke tests (next iteration).
-- [ ] Add AI eval runner with scored outputs (next iteration).
+- [x] Add AI eval runner with scored outputs.

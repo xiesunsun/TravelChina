@@ -12,7 +12,9 @@ This repository is managed in a harness-first way.
 ## Golden Commands
 - `bash scripts/run-harness.sh`: run v0 harness end-to-end.
 - `bash scripts/doc-lint.sh`: validate required docs and structure.
+- `bash scripts/generate-artifacts.sh`: regenerate OpenAPI and DB schema docs.
 - `cd backend && uv run --with pytest pytest tests -q`: backend contract tests.
+- `cd frontend && npm test`: frontend unit tests.
 - `cd frontend && npm run build`: frontend production build check.
 
 ## Definition Of Done

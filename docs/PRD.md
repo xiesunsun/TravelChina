@@ -121,114 +121,54 @@
 - **工具库**: html2canvas (截图), date-fns (日期处理)
     
 
-### 3.2 后端 (Recommended for Future)
+### 3.2 后端 (Current + Next)
 
-目前使用 localStorage，为了实现多端同步和数据持久化，建议采用以下架构：
+当前版本已使用后端 API 作为主数据链路，不再依赖 localStorage 作为主存储：
 
-- **Runtime**: Node.js
-    
-- **Framework**: **NestJS** (推荐，适合构建规范的API) 或 **Koa** (轻量级)
-    
-- **Database**: **MySQL** 8.0 (存储结构化旅行数据)
-    
-- **ORM**: Prisma 或 TypeORM
-    
-- **Object Storage (OSS)**: 阿里云 OSS / AWS S3 (用于存储用户上传的图片，数据库仅存 URL)
+- **Runtime**: Python 3.12+
+- **Framework**: FastAPI
+- **Database**: SQLite（当前），后续可迁移 MySQL
+- **ORM**: SQLAlchemy 2.x + Alembic
+- **Auth**: JWT Bearer
+- **Object Storage**: 阿里云 OSS（通过后端上传接口）
+
+后续演进方向：
+
+- 引入多端统一登录（微信/手机号）
+- 从 SQLite 平滑迁移到 MySQL
+- 增加更细粒度的权限与审计
     
 
 ---
 
 ## 4. 前后端对接技术文档 (API Design)
 
-为实现从 LocalStorage 到服务端的迁移，我们需要实现以下 RESTful API。
+当前生效接口统一使用 `/api/v1` 前缀。
 
-### 4.1 数据结构映射 (TravelRecord Entity)
+### 4.1 鉴权接口
 
-code SQL
+- `POST /api/v1/auth/register`
+- `POST /api/v1/auth/login`
 
-```
-CREATE TABLE travel_records (
-    id VARCHAR(36) PRIMARY KEY,
-    user_id VARCHAR(36) NOT NULL,
-    city VARCHAR(50) NOT NULL,       -- 显示的城市/景点名
-    region VARCHAR(50) NOT NULL,     -- 省份/区域名 (用于地图高亮)
-    date DATE NOT NULL,
-    weather ENUM('sunny', 'rainy', 'cloudy', 'snowy'),
-    description TEXT,
-    image_url VARCHAR(255),          -- 图片的云存储地址
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-```
+登录后返回 JWT，后续请求携带：
 
-### 4.2 API 接口定义
+`Authorization: Bearer <token>`
 
-#### 1. 获取足迹列表
+### 4.2 足迹接口
 
-- **Endpoint**: GET /api/records
-    
-- **Response**:
-    
-    code JSON
-    
-    ```
-    {
-      "code": 200,
-      "data": [
-        {
-          "id": "uuid-...",
-          "city": "杭州",
-          "region": "浙江省",
-          "date": "2024-03-20",
-          "weather": "rainy",
-          "description": "欲把西湖比西子...",
-          "imageUrl": "https://oss.../img.jpg"
-        }
-      ]
-    }
-    ```
-    
+- `GET /api/v1/records/`
+- `POST /api/v1/records/`
+- `PUT /api/v1/records/{record_id}`
+- `DELETE /api/v1/records/{record_id}`
 
-#### 2. 新增足迹 (含图片上传)
+### 4.3 AI 接口
 
-这是一步复合操作，建议分两步或使用 multipart/form-data。推荐**前后端分离上传策略**以减轻服务器压力：
+- `POST /api/v1/ai/chat`
+- `POST /api/v1/ai/resolve_location`
 
-- **Step 1: 获取上传凭证 (Pre-signed URL)**
-    
-    - GET /api/upload/token?filename=xxx.jpg
-        
-    - 返回：上传至 OSS 的临时链接。
-        
-- **Step 2: 前端直传图片到 OSS**
-    
-- **Step 3: 保存记录**
-    
-    - **Endpoint**: POST /api/records
-        
-    - **Body**:
-        
-        code JSON
-        
-        ```
-        {
-          "city": "苏州",
-          "region": "江苏省",
-          "date": "2024-04-01",
-          "weather": "sunny",
-          "description": "...",
-          "imageUrl": "https://oss.../uploaded-file.jpg"
-        }
-        ```
-        
+### 4.4 上传接口
 
-#### 3. AI 问答代理 (可选)
-
-如果不想在前端暴露 Gemini API Key，可以通过后端转发：
-
-- **Endpoint**: POST /api/ai/generate-question
-    
-- **Body**: { "step": "weather", "context": {...} }
-    
-- **Backend Logic**: 后端调用 Google GenAI SDK，返回生成的文本。
+- `POST /api/v1/upload/`（`multipart/form-data`）
     
 
 ---

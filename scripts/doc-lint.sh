@@ -11,6 +11,8 @@ required=(
   "docs/design-docs/harness-v0.md"
   "docs/product-specs/index.md"
   "docs/exec-plans/active/harness-v0-rollout.md"
+  "docs/generated/openapi.json"
+  "docs/generated/db-schema.md"
   "docs/QUALITY_SCORE.md"
   "docs/RELIABILITY.md"
   "docs/SECURITY.md"
