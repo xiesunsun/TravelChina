@@ -10,7 +10,8 @@ This repository is managed in a harness-first way.
 - `scripts/`: local automation used by people and CI.
 
 ## Golden Commands
-- `bash scripts/run-harness.sh`: run v0 harness end-to-end.
+- `bash scripts/run-harness.sh`: run harness end-to-end (includes e2e smoke by default).
+- `HARNESS_SKIP_E2E=1 bash scripts/run-harness.sh`: run harness without e2e smoke.
 - `bash scripts/doc-lint.sh`: validate required docs and structure.
 - `bash scripts/generate-artifacts.sh`: regenerate OpenAPI and DB schema docs.
 - `cd backend && uv run --with pytest pytest tests -q`: backend contract tests.
@@ -23,3 +24,4 @@ This repository is managed in a harness-first way.
 - Harness checks are green locally and in CI.
 - Architecture invariants in `ARCHITECTURE.md` are preserved.
 - New AI behavior has at least one reproducible eval case in `harness/evals/`.
+- No production/staging release with default JWT secret.

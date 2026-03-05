@@ -14,7 +14,7 @@ Date: 2026-03-05
 - API contract confidence: 4 (auth + CRUD + ai/upload tests)
 - Documentation consistency: 4 (spec drift reconciled and generated artifacts gated)
 - Automation coverage: 4.5 (CI gates include docs/arch/eval/unit/e2e/build)
-- Operational safety: 3 (JWT in place, production secret hardening pending)
+- Operational safety: 3.8 (JWT in place + production/staging default secret startup guard)
 
 ## Next Target
-Reach average >= 4.7 by adding stronger auth hardening and retry/error budgets.
+Reach average >= 4.7 by adding retry/error budgets and hardened token storage model.

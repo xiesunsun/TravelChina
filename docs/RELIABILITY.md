@@ -14,4 +14,4 @@
 - No seeded integration environment in CI.
 
 ## Immediate Next Step
-Add one Playwright smoke scenario: create record -> list record -> delete record.
+Add retry/backoff policy and timeout budgets for AI/OSS calls with observable error metrics.
