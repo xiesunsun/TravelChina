@@ -24,12 +24,22 @@ for file in "${required[@]}"; do
   fi
 done
 
-if ! rg -q "harness" AGENTS.md; then
+contains() {
+  local pattern="$1"
+  local file="$2"
+  if command -v rg >/dev/null 2>&1; then
+    rg -q "$pattern" "$file"
+  else
+    grep -q "$pattern" "$file"
+  fi
+}
+
+if ! contains "harness" AGENTS.md; then
   echo "[doc-lint] AGENTS.md must mention harness workflow"
   exit 1
 fi
 
-if ! rg -q "Invariants" ARCHITECTURE.md; then
+if ! contains "Invariants" ARCHITECTURE.md; then
   echo "[doc-lint] ARCHITECTURE.md must contain invariants section"
   exit 1
 fi
