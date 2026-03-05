@@ -1,0 +1,33 @@
+{
+  "generated_at": "2026-03-05T13:07:33.060727+00:00",
+  "summary": {
+    "total": 2,
+    "passed": 2,
+    "failed": 0,
+    "score": 1.0
+  },
+  "results": [
+    {
+      "case_id": "location_fallback",
+      "passed": true,
+      "expected": {
+        "non_empty": true
+      },
+      "checks": {
+        "non_empty": true
+      },
+      "output_preview": "嗯？在浙江的哪一处留下你的足迹了呀？"
+    },
+    {
+      "case_id": "description_fallback",
+      "passed": true,
+      "expected": {
+        "non_empty": true
+      },
+      "checks": {
+        "non_empty": true
+      },
+      "output_preview": "你最喜欢旅行中的哪个瞬间？"
+    }
+  ]
+}

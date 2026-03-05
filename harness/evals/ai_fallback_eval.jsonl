@@ -1,0 +1,2 @@
+{"case_id":"location_fallback","input":{"type":"location","context":{"region":"浙江省"}},"expected":{"non_empty":true}}
+{"case_id":"description_fallback","input":{"type":"description","context":{"city":"杭州"}},"expected":{"non_empty":true}}

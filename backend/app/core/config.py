@@ -1,0 +1,32 @@
+# backend/app/core/config.py
+from pydantic_settings import BaseSettings, SettingsConfigDict
+from typing import Optional
+
+class Settings(BaseSettings):
+    # --- 基础配置 ---
+    PROJECT_NAME: str = "Huixing Zhonghua API"
+    API_V1_STR: str = "/api/v1"
+    
+    # --- 阿里云 OSS 配置 (自动读取 .env 中对应的字段) ---
+    # 比如 .env 里叫 ALIYUN_ACCESS_KEY_ID，这里就会自动匹配
+    ALIYUN_ACCESS_KEY_ID: Optional[str] = None
+    ALIYUN_ACCESS_KEY_SECRET: Optional[str] = None
+    ALIYUN_OSS_BUCKET_NAME: Optional[str] = None
+    ALIYUN_OSS_ENDPOINT: Optional[str] = None # 例如: oss-cn-hangzhou.aliyuncs.com
+    ALIYUN_OSS_DOMAIN: Optional[str] = None
+    
+    # --- AI 配置 ---
+    GEMINI_API_KEY: Optional[str] = None
+
+    # --- Auth 配置 ---
+    JWT_SECRET_KEY: str = "dev-only-change-me"
+    JWT_ALGORITHM: str = "HS256"
+    JWT_ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 7
+
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        case_sensitive=True,
+        extra="ignore",
+    )
+
+settings = Settings()
