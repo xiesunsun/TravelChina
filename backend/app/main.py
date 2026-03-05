@@ -1,11 +1,22 @@
 # backend/app/main.py
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from app.core.config import settings
 from app.api.v1.endpoints import records
 from app.api.v1.endpoints import upload
 from app.api.v1.endpoints import ai
 from app.api.v1.endpoints import auth
-app = FastAPI(title="Huixing Zhonghua API")
+
+
+@asynccontextmanager
+async def lifespan(_: FastAPI):
+    settings.validate_runtime_security()
+    yield
+
+
+app = FastAPI(title="Huixing Zhonghua API", lifespan=lifespan)
 
 # --- CORS 配置 (关键！解决前端跨域问题) ---
 # 允许前端 http://localhost:5173 访问后端
@@ -31,6 +42,8 @@ app.include_router(records.router, prefix="/api/v1/records", tags=["records"])
 app.include_router(upload.router, prefix="/api/v1/upload", tags=["upload"])
 app.include_router(ai.router, prefix="/api/v1/ai", tags=["ai"])
 app.include_router(auth.router, prefix="/api/v1/auth", tags=["auth"])
+
+
 @app.get("/")
 def root():
     return {"message": "Hello from Huixing Backend!"}

@@ -7,6 +7,8 @@ cd "$ROOT_DIR"
 main_file="backend/app/main.py"
 records_file="backend/app/api/v1/endpoints/records.py"
 ai_file="backend/app/api/v1/endpoints/ai.py"
+frontend_api_file="frontend/services/apiService.ts"
+backend_config_file="backend/app/core/config.py"
 
 if grep "include_router" "$main_file" | grep -v '/api/v1/' >/dev/null; then
   echo "[arch-lint] All routers in main.py must use /api/v1/* prefix"
@@ -35,6 +37,21 @@ fi
 
 if ! grep -q "from app.services.ai_service import AIService" "$ai_file"; then
   echo "[arch-lint] AI endpoint must call AIService wrapper"
+  exit 1
+fi
+
+if ! grep -q "validate_runtime_security" "$main_file"; then
+  echo "[arch-lint] FastAPI startup must enforce runtime security validation"
+  exit 1
+fi
+
+if ! grep -q "ENVIRONMENT" "$backend_config_file"; then
+  echo "[arch-lint] Settings must define ENVIRONMENT for runtime guardrails"
+  exit 1
+fi
+
+if contains "huixing_auth_password" "$frontend_api_file"; then
+  echo "[arch-lint] Frontend apiService must not persist plaintext auth password"
   exit 1
 fi
 

@@ -5,6 +5,7 @@ from typing import Optional
 class Settings(BaseSettings):
     # --- 基础配置 ---
     PROJECT_NAME: str = "Huixing Zhonghua API"
+    ENVIRONMENT: str = "development"
     API_V1_STR: str = "/api/v1"
     SQLALCHEMY_DATABASE_URL: str = "sqlite:///./huixing.db"
     
@@ -29,5 +30,20 @@ class Settings(BaseSettings):
         case_sensitive=True,
         extra="ignore",
     )
+
+    def validate_runtime_security(self) -> None:
+        env_name = self.ENVIRONMENT.strip().lower()
+        if env_name not in {"production", "staging"}:
+            return
+
+        if self.JWT_SECRET_KEY == "dev-only-change-me":
+            raise ValueError(
+                "JWT_SECRET_KEY must be overridden in production/staging environment"
+            )
+
+        if len(self.JWT_SECRET_KEY) < 32:
+            raise ValueError(
+                "JWT_SECRET_KEY must be at least 32 characters in production/staging environment"
+            )
 
 settings = Settings()
