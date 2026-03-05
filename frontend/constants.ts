@@ -17,6 +17,7 @@ export const WEATHER_OPTIONS = [
   { value: 'rainy', label: '雨亦奇', icon: '🌧️' },
   { value: 'cloudy', label: '云深处', icon: '☁️' },
   { value: 'snowy', label: '雪初霁', icon: '❄️' },
+  { value: 'unknown', label: '忆朦胧', icon: '🌫️' },
 ];
 
 // Fallback or utility to find coordinates for major cities if GeoJSON lookups fail

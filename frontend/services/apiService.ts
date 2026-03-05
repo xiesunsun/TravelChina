@@ -3,7 +3,7 @@
 import { TravelRecord } from '../types'; // 引用你原来的类型定义
 
 // 指向你的 FastAPI 地址 (注意端口 8000)
-const API_BASE_URL = 'http://localhost:8000/api/v1';
+export const API_BASE_URL = 'http://localhost:8000/api/v1';
 
 // --- 1. 图片上传 (Upload) ---
 export const uploadImage = async (file: File): Promise<string> => {
@@ -59,7 +59,7 @@ export const fetchRecords = async (): Promise<TravelRecord[]> => {
 
             date: item.travel_date,
             description: item.thoughts || '',
-            weather: (['sunny', 'rainy', 'cloudy', 'snowy'].includes(item.weather) ? item.weather : 'sunny') as any,
+            weather: (['sunny', 'rainy', 'cloudy', 'snowy', 'unknown'].includes(item.weather) ? item.weather : 'sunny') as any,
 
             // 【兼容】旧 UI 用这个
             imageUrl: (item.images && item.images.length > 0) ? item.images[0] : undefined,
@@ -80,7 +80,7 @@ export const createRecord = async (record: Omit<TravelRecord, 'id' | 'timestamp'
     const payload = {
         province: record.region || record.province || '未知省份',
         city: record.city,
-        spot_name: record.city, // 暂时用城市名填充景点，或者留空
+        spot_name: record.spot_name || record.city, // 优先使用 spot_name
         travel_date: record.date,
         weather: record.weather,
         thoughts: record.description,
@@ -103,6 +103,7 @@ export const createRecord = async (record: Omit<TravelRecord, 'id' | 'timestamp'
         region: newItem.province,
         province: newItem.province,
         city: newItem.city,
+        spot_name: newItem.spot_name, // 确保返回 spot_name
         date: newItem.travel_date,
         description: newItem.thoughts,
         weather: newItem.weather,
@@ -117,7 +118,7 @@ export const updateRecord = async (id: string, record: Partial<TravelRecord>): P
     const payload = {
         province: record.region || record.province || '未知省份',
         city: record.city,
-        spot_name: record.city,
+        spot_name: record.spot_name || record.city,
         travel_date: record.date,
         weather: record.weather,
         thoughts: record.description,
@@ -139,6 +140,7 @@ export const updateRecord = async (id: string, record: Partial<TravelRecord>): P
         region: newItem.province,
         province: newItem.province,
         city: newItem.city,
+        spot_name: newItem.spot_name,
         date: newItem.travel_date,
         description: newItem.thoughts,
         weather: newItem.weather,

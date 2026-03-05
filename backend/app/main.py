@@ -3,6 +3,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.api.v1.endpoints import records
 from app.api.v1.endpoints import upload
+from app.api.v1.endpoints import ai
 app = FastAPI(title="Huixing Zhonghua API")
 
 # --- CORS 配置 (关键！解决前端跨域问题) ---
@@ -23,6 +24,7 @@ app.add_middleware(
 # --- 注册路由 ---
 app.include_router(records.router, prefix="/api/v1/records", tags=["records"])
 app.include_router(upload.router, prefix="/api/v1/upload", tags=["upload"])
+app.include_router(ai.router, prefix="/api/v1/ai", tags=["ai"])
 @app.get("/")
 def root():
     return {"message": "Hello from Huixing Backend!"}

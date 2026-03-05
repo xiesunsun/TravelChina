@@ -148,18 +148,15 @@ const AppContent = () => {
         </Routes>
       </main>
 
-      {/* Conditional rendering ensures RecordModal is freshly mounted every time it opens */}
-      {isModalOpen && (
-        <RecordModal
-          isOpen={isModalOpen}
-          initialLocation={selectedLocation}
-          existingRecords={selectedRecords}
-          isFirstVisit={isFirstVisit}
-          onClose={() => setIsModalOpen(false)}
-          onSave={handleSaveRecord}
-          onDelete={handleDeleteRecord}
-        />
-      )}
+      <RecordModal
+        isOpen={isModalOpen}
+        initialLocation={selectedLocation}
+        existingRecords={selectedRecords}
+        isFirstVisit={isFirstVisit}
+        onClose={() => setIsModalOpen(false)}
+        onSave={handleSaveRecord}
+        onDelete={handleDeleteRecord}
+      />
     </div>
   );
 };

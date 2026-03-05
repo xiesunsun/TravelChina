@@ -9,11 +9,14 @@ class Settings(BaseSettings):
     
     # --- 阿里云 OSS 配置 (自动读取 .env 中对应的字段) ---
     # 比如 .env 里叫 ALIYUN_ACCESS_KEY_ID，这里就会自动匹配
-    ALIYUN_ACCESS_KEY_ID: str
-    ALIYUN_ACCESS_KEY_SECRET: str
-    ALIYUN_OSS_BUCKET_NAME: str
-    ALIYUN_OSS_ENDPOINT: str # 例如: oss-cn-hangzhou.aliyuncs.com
-    ALIYUN_OSS_DOMAIN: str
+    ALIYUN_ACCESS_KEY_ID: Optional[str] = None
+    ALIYUN_ACCESS_KEY_SECRET: Optional[str] = None
+    ALIYUN_OSS_BUCKET_NAME: Optional[str] = None
+    ALIYUN_OSS_ENDPOINT: Optional[str] = None # 例如: oss-cn-hangzhou.aliyuncs.com
+    ALIYUN_OSS_DOMAIN: Optional[str] = None
+    
+    # --- AI 配置 ---
+    GEMINI_API_KEY: Optional[str] = None
 
     class Config:
         # 告诉 Pydantic 去哪里找 .env 文件

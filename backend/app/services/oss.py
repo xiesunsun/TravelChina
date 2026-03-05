@@ -9,6 +9,17 @@ def upload_file_to_oss(file_bytes: bytes, filename: str, content_type: str) -> s
     """
     上传文件到阿里云 OSS，并返回完整的 URL
     """
+    required = {
+        "ALIYUN_ACCESS_KEY_ID": settings.ALIYUN_ACCESS_KEY_ID,
+        "ALIYUN_ACCESS_KEY_SECRET": settings.ALIYUN_ACCESS_KEY_SECRET,
+        "ALIYUN_OSS_BUCKET_NAME": settings.ALIYUN_OSS_BUCKET_NAME,
+        "ALIYUN_OSS_ENDPOINT": settings.ALIYUN_OSS_ENDPOINT,
+        "ALIYUN_OSS_DOMAIN": settings.ALIYUN_OSS_DOMAIN,
+    }
+    missing = [key for key, value in required.items() if not value]
+    if missing:
+        raise RuntimeError(f"Missing OSS settings: {', '.join(missing)}")
+
     # 1. 初始化 Auth 和 Bucket
     auth = oss2.Auth(settings.ALIYUN_ACCESS_KEY_ID, settings.ALIYUN_ACCESS_KEY_SECRET)
     bucket = oss2.Bucket(auth, settings.ALIYUN_OSS_ENDPOINT, settings.ALIYUN_OSS_BUCKET_NAME)

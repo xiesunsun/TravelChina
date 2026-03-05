@@ -17,7 +17,7 @@ export interface TravelRecord {
 
   // --- 天气 ---
   // 注意：后端如果返回 'unknown'，apiService 里会转成 'sunny' 以匹配这个类型
-  weather: 'sunny' | 'rainy' | 'cloudy' | 'snowy';
+  weather: 'sunny' | 'rainy' | 'cloudy' | 'snowy' | 'unknown';
 
   timestamp: number;    // 用于排序
 }

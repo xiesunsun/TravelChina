@@ -1,26 +1,22 @@
-
-import { GoogleGenAI } from "@google/genai";
-
-// Initialize AI client if key is available (Client-side safe check)
-const apiKey = typeof process !== 'undefined' && process.env ? process.env.API_KEY : '';
-const ai = apiKey ? new GoogleGenAI({ apiKey }) : null;
+import { API_BASE_URL } from './apiService';
 
 type QuestionType = 'location' | 'date' | 'weather' | 'photo' | 'description';
 
 interface QuestionContext {
   region?: string; // The province/region clicked on map
   city?: string;
+  spot_name?: string;
   date?: string;
   weather?: string;
 }
 
-const SYSTEM_INSTRUCTION = `
-你是一位温婉、知性且充满生活情趣的女性旅行博主，也是用户最好的旅行搭子。
-你的语气要自然、亲切、像一位老朋友聊天，不要使用翻译腔，也不要过于古板（不要满口“吾”、“汝”、“甚好”）。
-你可以适当使用一点点诗意的表达，但主体要是现代汉语，让人感觉舒服、放松。
-你的任务是引导用户回忆并记录旅行细节。
-每次只问一个简短的问题，字数控制在30字以内。
-`;
+interface ExtractionResult {
+  city?: string;
+  spot_name?: string;
+  travel_date?: string;
+  weather?: string;
+  ai_tags?: string[];
+}
 
 // Fallback messages: Modern, warm, friendly
 const FALLBACK_MESSAGES: Record<QuestionType, string[]> = {
@@ -74,46 +70,58 @@ export const generateQuestion = async (
   type: QuestionType,
   context: QuestionContext
 ): Promise<string> => {
-  // If no AI client, return fallback immediately
-  if (!ai) {
-    return getRandomFallback(type, context);
-  }
-
   try {
-    const model = 'gemini-2.5-flash-lite';
-    let prompt = '';
-
-    switch (type) {
-      case 'location':
-        prompt = `用户点击了地图上的"${context.region || '某个地方'}"。作为朋友，请自然地询问用户具体去了哪个城市或景点。不要太书面。`;
-        break;
-      case 'date':
-        prompt = `用户去了"${context.city}"。请像朋友一样随口问问是哪天去的。`;
-        break;
-      case 'weather':
-        prompt = `用户在"${context.date}"去了"${context.city}"。请温柔地询问那天天气如何。`;
-        break;
-      case 'photo':
-        prompt = `请用期待的语气询问用户是否有关于"${context.city}"的照片愿意分享。`;
-        break;
-      case 'description':
-        prompt = `用户分享了照片（或没分享）。请引导用户写下一段简短的随笔，语气要感性一点。`;
-        break;
-    }
-
-    const response = await ai.models.generateContent({
-      model,
-      contents: prompt,
-      config: {
-        systemInstruction: SYSTEM_INSTRUCTION,
-        temperature: 1.1,
-      }
+    const response = await fetch(`${API_BASE_URL}/ai/chat`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        step: type,
+        ...context
+      }),
     });
 
-    const text = response.text;
-    return text || getRandomFallback(type, context);
+    if (!response.ok) {
+      throw new Error('Network response was not ok');
+    }
+
+    const data = await response.json();
+    return data.message;
   } catch (error) {
     console.warn("AI generation failed, using fallback:", error);
     return getRandomFallback(type, context);
   }
 };
+
+interface LocationResult {
+  city: string;
+  spot_name: string;
+}
+
+export const resolveLocation = async (
+  locationInput: string,
+  regionContext: string
+): Promise<LocationResult> => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/ai/resolve_location`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        location_input: locationInput,
+        region_context: regionContext
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error('Location resolution failed');
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error("AI location resolution failed:", error);
+    return { city: '云深不知处', spot_name: locationInput };
+  }
+}
