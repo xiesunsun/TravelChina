@@ -6,6 +6,7 @@ class Settings(BaseSettings):
     # --- 基础配置 ---
     PROJECT_NAME: str = "Huixing Zhonghua API"
     API_V1_STR: str = "/api/v1"
+    SQLALCHEMY_DATABASE_URL: str = "sqlite:///./huixing.db"
     
     # --- 阿里云 OSS 配置 (自动读取 .env 中对应的字段) ---
     # 比如 .env 里叫 ALIYUN_ACCESS_KEY_ID，这里就会自动匹配

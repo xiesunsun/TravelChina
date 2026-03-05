@@ -15,6 +15,7 @@ This repository is managed in a harness-first way.
 - `bash scripts/generate-artifacts.sh`: regenerate OpenAPI and DB schema docs.
 - `cd backend && uv run --with pytest pytest tests -q`: backend contract tests.
 - `cd frontend && npm test`: frontend unit tests.
+- `cd frontend && npm run test:e2e`: frontend Playwright smoke tests.
 - `cd frontend && npm run build`: frontend production build check.
 
 ## Definition Of Done

@@ -10,8 +10,12 @@ app = FastAPI(title="Huixing Zhonghua API")
 # --- CORS 配置 (关键！解决前端跨域问题) ---
 # 允许前端 http://localhost:5173 访问后端
 origins = [
-    "http://localhost:5173", # Vite 默认端口
+    "http://localhost:5173",
     "http://localhost:3000",
+    "http://localhost:4173",
+    "http://127.0.0.1:5173",
+    "http://127.0.0.1:3000",
+    "http://127.0.0.1:4173",
 ]
 
 app.add_middleware(

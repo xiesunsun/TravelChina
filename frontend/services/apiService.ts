@@ -1,7 +1,8 @@
 import { TravelRecord } from '../types';
 import { BackendRecord, toBackendPayload, toFrontendRecord } from './recordAdapter';
 
-export const API_BASE_URL = 'http://localhost:8000/api/v1';
+export const API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api/v1';
 
 const AUTH_TOKEN_KEY = 'huixing_auth_token';
 const AUTH_USERNAME_KEY = 'huixing_auth_username';
