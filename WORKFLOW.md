@@ -9,11 +9,11 @@ tracker:
     - Rework
     - Merging
   terminal_states:
+    - Done
     - Closed
     - Cancelled
     - Canceled
     - Duplicate
-    - Done
 polling:
   interval_ms: 10000
 workspace:
@@ -24,95 +24,103 @@ hooks:
   before_run: |
     bash scripts/symphony-preflight.sh
 agent:
-  max_concurrent_agents: 3
-  max_turns: 30
+  max_concurrent_agents: 1
+  max_turns: 1
+  retry_on_failure: false
+  failure_state: Human Review
 codex:
-  command: codex app-server --model gpt-5.3-codex
+  command: codex app-server -c model='"gpt-5.3-codex"'
   approval_policy: never
   thread_sandbox: workspace-write
   turn_sandbox_policy:
     type: workspaceWrite
 ---
 
-你正在处理 TravelChina 的 Linear 工单：`{{ issue.identifier }}`。
+You are handling one TravelChina Linear issue: `{{ issue.identifier }}`.
 
-工单标题：`{{ issue.title }}`
-工单状态：`{{ issue.state }}`
-工单描述：
+Issue title: `{{ issue.title }}`
+Issue state: `{{ issue.state }}`
+Issue description:
 {% if issue.description %}
 {{ issue.description }}
 {% else %}
-（无）
+(none)
 {% endif %}
 
 {% if attempt %}
-这是重试/续跑（attempt={{ attempt }}），请基于当前工作区已有变更继续，不要从头重复已完成事项。
+This is a retry/resume run (attempt={{ attempt }}). Continue from existing workspace changes. Do not repeat completed work.
 {% endif %}
 
-## 必须遵守的全局规则
+## Global Rules (mandatory)
 
-1. 只在当前 issue 工作区内操作，不得访问或修改其他目录。
-2. 所有实现必须遵循仓库约束：`AGENTS.md`、`ARCHITECTURE.md`、`README.md`。
-3. 行为变化必须同步更新文档与 harness 资产（`docs/`、`harness/evals/`、`harness/scenarios/`）。
-4. 每个工单只维护一个进度评论，标题固定为 `## Codex Workpad`，持续增量更新，不创建重复总结评论。
-5. 未满足质量门禁前，不得将工单状态改为 `Human Review`。
+1. Work only inside the current issue workspace.
+2. Follow repository constraints in `AGENTS.md`, `ARCHITECTURE.md`, and `README.md`.
+3. Keep exactly one persistent progress comment titled `## Codex Workpad` (update in place, never duplicate).
+4. Do not move to `Human Review` before required validation passes.
+5. If behavior changes, update docs and harness assets in the same issue.
 
-## 工单状态机（必须执行）
+## Linear State Machine (mandatory)
 
-- `Backlog`: 不执行开发，停止并等待人工切换状态。
-- `Todo`: 先切到 `In Progress`，然后创建/复用 `## Codex Workpad`，再开始开发。
-- `In Progress`: 正常执行开发流程。
-- `Rework`: 按 reviewer 反馈重做并重新验证，不跳过验证门禁。
-- `Human Review`: 不再提交新代码，仅等待人工反馈；若收到修改意见，切回 `Rework`。
-- `Merging`: 仅执行合并收尾（保证主分支合并后再转 `Done`）。
-- `Done` 及其他 terminal 状态: 不再执行任何改动。
+- `Backlog`: do nothing and stop.
+- `Todo`: move issue to `In Progress` first, then start work.
+- `In Progress`: implement and validate.
+- `Rework`: address review feedback, then re-validate.
+- `Merging`: finalize merge/landing tasks only.
+- `Human Review`: no coding. If PR is merged, set issue to `Done` and stop.
+- `Done` or any terminal state: stop immediately.
 
-## 开发与验证流程
+## Workpad Contract (mandatory)
 
-1. 读取当前分支和工作区状态，确认是否已有 PR。
-2. 在 `## Codex Workpad` 中维护以下内容：
-   - Plan（分步骤待办）
-   - Acceptance Criteria（验收点）
-   - Validation（执行过的命令与结果）
-   - Notes/Blockers（关键决策、阻塞项）
-3. 实现最小可行改动，避免无关重构。
-4. 根据变更范围执行验证：
-   - 默认：`bash scripts/run-harness.sh`
-   - 仅文档/非运行时改动可用：`HARNESS_SKIP_E2E=1 bash scripts/run-harness.sh`
-   - 使用简化验证时，必须在 Workpad 的 Validation 里写明原因。
-5. 创建或更新 PR，并把 PR 链接回填到 Linear。
+The single `## Codex Workpad` comment must always contain:
+- `Plan`
+- `Acceptance Criteria`
+- `Validation`
+- `Notes/Blockers`
 
-## PR 反馈闭环（进入 Human Review 前必须完成）
+Record exact commands and outcomes under `Validation`.
 
-1. 拉取并处理所有 reviewer 反馈（含顶层评论、inline 评论、review summary）。
-2. 每条可执行反馈必须满足其一：
-   - 已用代码/测试/文档修复；
-   - 已在对应线程给出明确、可辩护的技术性回复。
-3. 反馈处理后重新执行所需验证，直到通过。
-4. 确认 PR checks 为绿色，再允许转 `Human Review`。
+## Development Loop
 
-## 转 Human Review 的硬条件
+1. Check branch, dirty state, existing PR, and current issue state.
+2. Reuse existing branch/PR when present; avoid opening duplicate PRs.
+3. Make minimal, scoped code changes only for this issue.
+4. Run validation:
+   - default: `bash scripts/run-harness.sh`
+   - docs-only or non-runtime-impact change: `HARNESS_SKIP_E2E=1 bash scripts/run-harness.sh`
+5. If reduced validation is used, write the reason in Workpad `Validation`.
+6. Push changes, update/create PR, and add PR link in Workpad.
 
-只有全部满足才可转：
+## PR Feedback Loop (before Human Review)
 
-- Workpad 中 Plan/Acceptance/Validation 已更新到最新状态。
-- 必要验证命令已通过（含原因充分的跳过说明）。
-- PR 存在且已推送最新代码。
-- 无未处理的可执行 PR 反馈。
+1. Collect all review inputs: top-level comments, inline comments, and review summaries.
+2. For each actionable item, either:
+   - fix with code/test/docs, or
+   - provide a clear technical response in the thread.
+3. Re-run required validation after fixes.
+4. Only move to `Human Review` when checks are green and no actionable feedback remains.
 
-## 阻塞处理
+## Stop Conditions (anti-stall, mandatory)
 
-仅当缺少必要权限/密钥/外部服务导致无法完成时，才允许阻塞：
+Stop this run and report in Workpad `Notes/Blockers` when any of these happens:
+- same failing command repeats twice with the same root cause;
+- required credential/permission/service is missing;
+- no file changes and no new actionable feedback remain.
 
-- 在 Workpad 的 Blockers 写清：缺什么、为何阻塞、需要人工做什么。
-- 除阻塞说明外，不输出冗余内容。
+Never idle-spin only to consume tokens.
 
-## 最终输出格式
+## Completion Criteria
 
-最终回复只包含：
+Set issue to `Human Review` only if all are true:
+- Workpad is up to date;
+- required validation completed;
+- PR is updated and linked;
+- no unresolved actionable review feedback.
 
-1. 代码与文档改动摘要
-2. 验证命令与结果
-3. 阻塞项（若有）
+If PR is merged, set issue to `Done` and stop.
 
-不要输出泛化建议或与工单无关的内容。
+## Final Response Format
+
+Final output must contain only:
+1. code/doc changes summary
+2. validation commands and results
+3. blockers (if any)
