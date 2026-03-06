@@ -43,6 +43,7 @@ class Settings(BaseSettings):
 
     # --- Runtime feature guardrails ---
     REQUIRE_OSS_CONFIG: bool = False
+    DB_BOOTSTRAP_ON_STARTUP: bool = True
 
     model_config = SettingsConfigDict(
         env_file=".env",

@@ -1,3 +1,13 @@
+import os
+import subprocess
+import sys
+import textwrap
+from pathlib import Path
+
+
+BACKEND_DIR = Path(__file__).resolve().parents[1]
+
+
 def test_auth_register_and_login(client):
     register_response = client.post(
         "/api/v1/auth/register",
@@ -62,3 +72,72 @@ def test_auth_rejects_duplicate_username(client):
 
     assert first.status_code == 201
     assert second.status_code == 409
+
+
+def test_auth_fresh_startup_auto_bootstraps_schema(tmp_path):
+    db_path = tmp_path / "fresh_start.db"
+    script = textwrap.dedent(
+        """
+        from fastapi.testclient import TestClient
+        from app.main import app
+
+        with TestClient(app) as client:
+            register = client.post(
+                "/api/v1/auth/register",
+                json={"username": "root", "password": "rootmima"},
+            )
+            assert register.status_code == 201, register.text
+
+            login = client.post(
+                "/api/v1/auth/login",
+                json={"username": "root", "password": "rootmima"},
+            )
+            assert login.status_code == 200, login.text
+        """
+    )
+
+    env = os.environ.copy()
+    env["SQLALCHEMY_DATABASE_URL"] = f"sqlite:///{db_path}"
+    env["DB_BOOTSTRAP_ON_STARTUP"] = "true"
+    env["PYTHONPATH"] = str(BACKEND_DIR)
+
+    result = subprocess.run(
+        [sys.executable, "-c", script],
+        cwd=BACKEND_DIR,
+        env=env,
+        capture_output=True,
+        text=True,
+    )
+    assert result.returncode == 0, f"{result.stdout}\n{result.stderr}"
+
+
+def test_auth_missing_schema_returns_guided_503_when_bootstrap_disabled(tmp_path):
+    db_path = tmp_path / "missing_schema.db"
+    script = textwrap.dedent(
+        """
+        from fastapi.testclient import TestClient
+        from app.main import app
+
+        with TestClient(app) as client:
+            response = client.post(
+                "/api/v1/auth/register",
+                json={"username": "root", "password": "rootmima"},
+            )
+            assert response.status_code == 503, response.text
+            assert "alembic upgrade head" in response.text, response.text
+        """
+    )
+
+    env = os.environ.copy()
+    env["SQLALCHEMY_DATABASE_URL"] = f"sqlite:///{db_path}"
+    env["DB_BOOTSTRAP_ON_STARTUP"] = "false"
+    env["PYTHONPATH"] = str(BACKEND_DIR)
+
+    result = subprocess.run(
+        [sys.executable, "-c", script],
+        cwd=BACKEND_DIR,
+        env=env,
+        capture_output=True,
+        text=True,
+    )
+    assert result.returncode == 0, f"{result.stdout}\n{result.stderr}"

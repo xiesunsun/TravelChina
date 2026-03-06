@@ -32,13 +32,21 @@ TravelChina 是一个旅行记录应用，包含交互式地图、足迹列表�
 ```bash
 cd backend
 uv sync
-uv run alembic upgrade head
 uv run uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
+```
+
+默认会在后端启动时自动执行数据库迁移（`DB_BOOTSTRAP_ON_STARTUP=true`）。
+如需手动执行迁移，可运行：
+
+```bash
+cd backend
+uv run alembic upgrade head
 ```
 
 后端主要环境变量（`backend/.env`）：
 
 - `SQLALCHEMY_DATABASE_URL` (默认: `sqlite:///./huixing.db`)
+- `DB_BOOTSTRAP_ON_STARTUP` (默认: `true`，设为 `false` 时不在启动阶段自动迁移)
 - `ENVIRONMENT` (`development` / `staging` / `production`)
 - `JWT_SECRET_KEY`
 - `GEMINI_API_KEY`（可选，不配会走回退文案）

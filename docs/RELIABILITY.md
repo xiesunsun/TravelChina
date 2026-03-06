@@ -18,6 +18,7 @@
 ## Config Validation Policy
 - OSS config is validated for completeness/format with fail-fast errors.
 - Startup enforces config guardrails via `validate_runtime_configuration()`.
+- Startup auto-runs Alembic migrations by default (`DB_BOOTSTRAP_ON_STARTUP=true`) to avoid uninitialized SQLite schema on first run.
 - Harness/preflight share the same validator for local/CI consistency.
 - Strict mode can be enabled with:
   - `RUNTIME_VALIDATE_REQUIRE_OSS=1`

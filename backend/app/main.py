@@ -8,12 +8,15 @@ from app.api.v1.endpoints import records
 from app.api.v1.endpoints import upload
 from app.api.v1.endpoints import ai
 from app.api.v1.endpoints import auth
+from app.db.bootstrap import bootstrap_database
 
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     settings.validate_runtime_security()
     settings.validate_runtime_configuration()
+    if settings.DB_BOOTSTRAP_ON_STARTUP:
+        bootstrap_database()
     yield
 
 

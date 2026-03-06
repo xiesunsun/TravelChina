@@ -10,10 +10,6 @@ if [[ "$SQLALCHEMY_DATABASE_URL" == "sqlite:///./e2e.db" ]]; then
   rm -f e2e.db
 fi
 
-uv run python - <<'PY'
-from app.db.base import Base
-from app.db.session import engine
-Base.metadata.create_all(bind=engine)
-PY
+uv run alembic upgrade head
 
 exec uv run uvicorn app.main:app --host 127.0.0.1 --port 8000
