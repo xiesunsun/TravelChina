@@ -11,7 +11,8 @@ interface ScrollListProps {
 const ScrollList: React.FC<ScrollListProps> = ({ records }) => {
   const [selectedForShare, setSelectedForShare] = useState<TravelRecord | null>(null);
 
-  const getWeatherLabel = (val: string) => WEATHER_OPTIONS.find(o => o.value === val)?.label || '未知';
+  const getWeatherLabel = (weatherCode: string) =>
+    WEATHER_OPTIONS.find((option) => option.value === weatherCode)?.label || '未知';
 
   if (records.length === 0) {
     return (
@@ -33,7 +34,7 @@ const ScrollList: React.FC<ScrollListProps> = ({ records }) => {
           </div>
         </div>
 
-        {records.map((record, index) => (
+        {records.map((record) => (
           <div
             key={record.id}
             className="group relative shrink-0 w-[300px] h-[70vh] bg-paper shadow-lg border border-indigo/10 flex flex-col overflow-hidden transition-transform hover:-translate-y-2 hover:shadow-2xl"

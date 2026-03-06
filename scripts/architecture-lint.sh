@@ -56,12 +56,12 @@ if contains "huixing_auth_password" "$frontend_api_file"; then
 fi
 
 if command -v rg >/dev/null 2>&1; then
-  if rg -n "storageService" frontend --glob '!frontend/services/storageService.ts' >/dev/null 2>&1; then
-    echo "[arch-lint] storageService must not be used in active frontend app flow"
+  if rg -n "huixing_zhonghua_records" frontend >/dev/null 2>&1; then
+    echo "[arch-lint] Frontend must not store records directly in localStorage"
     exit 1
   fi
-elif grep -R -n "storageService" frontend | grep -v "frontend/services/storageService.ts" >/dev/null 2>&1; then
-  echo "[arch-lint] storageService must not be used in active frontend app flow"
+elif grep -R -n "huixing_zhonghua_records" frontend >/dev/null 2>&1; then
+  echo "[arch-lint] Frontend must not store records directly in localStorage"
   exit 1
 fi
 

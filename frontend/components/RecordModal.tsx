@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { X, Image as ImageIcon, ArrowRight, Check, RefreshCw, Calendar, MapPin, Plus, Trash2, PenTool, Cloud } from 'lucide-react';
 import { TravelRecord } from '../types';
-import { WEATHER_OPTIONS, COLORS } from '../constants';
+import { WEATHER_OPTIONS } from '../constants';
 import { generateQuestion, resolveLocation } from '../services/aiService';
-import { uploadImage, uploadImages } from '../services/apiService';
+import { uploadImages } from '../services/apiService';
 
 interface RecordModalProps {
   isOpen: boolean;
@@ -18,6 +18,13 @@ interface RecordModalProps {
 
 type Step = 'location' | 'date' | 'weather' | 'photo' | 'description' | 'review';
 type ViewMode = 'list' | 'wizard' | 'form';
+type StepQuestionContext = {
+  region?: string;
+  city?: string;
+  spot_name?: string;
+  date?: string;
+  weather?: string;
+};
 
 const RecordModal: React.FC<RecordModalProps> = ({ isOpen, initialLocation, existingRecords = [], isFirstVisit = true, onClose, onSave, onDelete }) => {
   // Data State
@@ -25,7 +32,6 @@ const RecordModal: React.FC<RecordModalProps> = ({ isOpen, initialLocation, exis
     weather: 'sunny'
   });
   const [imageFiles, setImageFiles] = useState<File[]>([]);
-  console.log('RecordModal Render. imageFiles:', imageFiles);
   const [existingImages, setExistingImages] = useState<string[]>([]);
 
   // UI State
@@ -158,7 +164,7 @@ const RecordModal: React.FC<RecordModalProps> = ({ isOpen, initialLocation, exis
     }
   }, [loadingQuestion, isTransitioning, viewMode, step, isResolvingLocation]);
 
-  const loadQuestion = async (nextStep: Step, context: any) => {
+  const loadQuestion = async (nextStep: Step, questionContext: StepQuestionContext) => {
     if (nextStep === 'review') return;
 
     setLoadingQuestion(true);
@@ -166,7 +172,7 @@ const RecordModal: React.FC<RecordModalProps> = ({ isOpen, initialLocation, exis
 
     // Slight delay for pacing (simulate thinking time)
     const minDelay = new Promise(resolve => setTimeout(resolve, 800));
-    const aiPromise = generateQuestion(nextStep, context);
+    const aiPromise = generateQuestion(nextStep, questionContext);
 
     const [_, text] = await Promise.all([minDelay, aiPromise]);
     setQuestion(text);
@@ -178,7 +184,7 @@ const RecordModal: React.FC<RecordModalProps> = ({ isOpen, initialLocation, exis
     setInputVisible(false); // Fade out input immediately
 
     let nextStep: Step = 'review';
-    let context = {
+    let questionContext: StepQuestionContext = {
       ...formData,
       region: initialLocation,
       city: formData.city,
@@ -203,7 +209,7 @@ const RecordModal: React.FC<RecordModalProps> = ({ isOpen, initialLocation, exis
           }));
 
           // Update context for the next question
-          context.city = result.city;
+          questionContext.city = result.city;
         } catch (e) {
           console.error("Location resolution failed", e);
         } finally {
@@ -234,7 +240,7 @@ const RecordModal: React.FC<RecordModalProps> = ({ isOpen, initialLocation, exis
       if (nextStep !== 'review') {
         // Ensure loading is true BEFORE we turn off transitioning
         setLoadingQuestion(true);
-        loadQuestion(nextStep, context);
+        loadQuestion(nextStep, questionContext);
       }
 
       // Now it's safe to turn off transitioning, as loadingQuestion is true (or we are in review)
@@ -365,20 +371,20 @@ const RecordModal: React.FC<RecordModalProps> = ({ isOpen, initialLocation, exis
         return (
           <div className="flex flex-col items-center w-full gap-6">
             <div className="grid grid-cols-5 gap-4 w-full max-w-3xl">
-              {WEATHER_OPTIONS.map((opt) => (
+              {WEATHER_OPTIONS.map((option) => (
                 <button
-                  key={opt.value}
+                  key={option.value}
                   onClick={() => {
-                    setFormData({ ...formData, weather: opt.value as any });
+                    setFormData({ ...formData, weather: option.value as TravelRecord['weather'] });
                     setTimeout(handleNext, 300);
                   }}
-                  className={`flex flex-col items-center justify-center p-4 rounded-lg border transition-all duration-300 ${formData.weather === opt.value
+                  className={`flex flex-col items-center justify-center p-4 rounded-lg border transition-all duration-300 ${formData.weather === option.value
                     ? 'border-cinnabar bg-cinnabar/5 scale-105 shadow-sm'
                     : 'border-transparent hover:bg-ink/5'
                     }`}
                 >
-                  <span className="text-4xl mb-2 filter drop-shadow-sm">{opt.icon}</span>
-                  <span className="font-serif text-ink whitespace-nowrap">{opt.label}</span>
+                  <span className="text-4xl mb-2 filter drop-shadow-sm">{option.icon}</span>
+                  <span className="font-serif text-ink whitespace-nowrap">{option.label}</span>
                 </button>
               ))}
             </div>
@@ -594,16 +600,18 @@ const RecordModal: React.FC<RecordModalProps> = ({ isOpen, initialLocation, exis
           <div className="flex-1">
             <label className="text-xs text-ashes font-serif block mb-2">天色</label>
             <div className="flex gap-2 flex-wrap">
-              {WEATHER_OPTIONS.map(opt => (
+              {WEATHER_OPTIONS.map((option) => (
                 <button
-                  key={opt.value}
-                  onClick={() => setFormData({ ...formData, weather: opt.value as any })}
-                  className={`px-3 py-1.5 rounded text-sm font-serif border transition-colors ${formData.weather === opt.value
+                  key={option.value}
+                  onClick={() =>
+                    setFormData({ ...formData, weather: option.value as TravelRecord['weather'] })
+                  }
+                  className={`px-3 py-1.5 rounded text-sm font-serif border transition-colors ${formData.weather === option.value
                     ? 'bg-cinnabar text-paper border-cinnabar'
                     : 'border-indigo/20 text-ink hover:border-indigo/50'
                     }`}
                 >
-                  {opt.label}
+                  {option.label}
                 </button>
               ))}
             </div>
@@ -627,7 +635,7 @@ const RecordModal: React.FC<RecordModalProps> = ({ isOpen, initialLocation, exis
           <div className="grid grid-cols-4 gap-2">
             {/* Existing Images */}
             {existingImages.map((url, idx) => (
-              <div key={`exist - ${idx} `} className="relative aspect-square group">
+              <div key={`existing-${idx}`} className="relative aspect-square group">
                 <img src={url} className="w-full h-full object-cover rounded-sm border border-indigo/10" />
                 <button
                   onClick={() => setExistingImages(prev => prev.filter((_, i) => i !== idx))}
@@ -640,7 +648,7 @@ const RecordModal: React.FC<RecordModalProps> = ({ isOpen, initialLocation, exis
 
             {/* New Files */}
             {imageFiles.map((file, idx) => (
-              <div key={`new- ${idx} `} className="relative aspect-square group">
+              <div key={`new-${idx}`} className="relative aspect-square group">
                 <img src={URL.createObjectURL(file)} className="w-full h-full object-cover rounded-sm border border-indigo/10" />
                 <button
                   onClick={() => setImageFiles(prev => prev.filter((_, i) => i !== idx))}

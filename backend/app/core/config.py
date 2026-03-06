@@ -4,7 +4,7 @@ from typing import Optional
 
 class Settings(BaseSettings):
     # --- 基础配置 ---
-    PROJECT_NAME: str = "Huixing Zhonghua API"
+    PROJECT_NAME: str = "TravelChina API"
     ENVIRONMENT: str = "development"
     API_V1_STR: str = "/api/v1"
     SQLALCHEMY_DATABASE_URL: str = "sqlite:///./huixing.db"

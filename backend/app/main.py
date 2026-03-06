@@ -16,7 +16,7 @@ async def lifespan(_: FastAPI):
     yield
 
 
-app = FastAPI(title="Huixing Zhonghua API", lifespan=lifespan)
+app = FastAPI(title=settings.PROJECT_NAME, lifespan=lifespan)
 
 # --- CORS 配置 (关键！解决前端跨域问题) ---
 # 允许前端 http://localhost:5173 访问后端

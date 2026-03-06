@@ -25,6 +25,7 @@ harness/reports/*.json
 __pycache__/
 *.py[cod]
 *$py.class
+*.db
 # virtual env
 venv/
 env/
