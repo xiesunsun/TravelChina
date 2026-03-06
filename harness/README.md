@@ -5,6 +5,10 @@
 - `fixtures/`: reusable payload fixtures.
 - `reports/`: run outputs (kept lightweight in git).
 
+Auth regression assets:
+- `scenarios/auth_validation.md`: auth input validation and readable error scenario.
+- `evals/auth_validation_eval.jsonl`: machine-readable auth regression cases.
+
 Run all v0 checks with:
 - `bash scripts/run-harness.sh`
 

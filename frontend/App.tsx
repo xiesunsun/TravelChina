@@ -15,6 +15,7 @@ import {
   hasAuthToken,
   AuthRequiredError,
 } from './services/apiService';
+import { AUTH_RULES, validateAuthInput } from './services/authValidation';
 import { LogOut, MapPin, ScrollText } from 'lucide-react';
 
 const Navigation = ({ onLogout }: { onLogout: () => void }) => {
@@ -79,8 +80,9 @@ const AuthScreen = ({ onAuthenticated }: { onAuthenticated: () => void }) => {
 
   const submit = async (mode: 'login' | 'register'): Promise<void> => {
     const trimmedUser = username.trim();
-    if (!trimmedUser || !password) {
-      setError('请输入用户名和密码');
+    const validationError = validateAuthInput({ username: trimmedUser, password });
+    if (validationError) {
+      setError(validationError);
       return;
     }
 
@@ -127,8 +129,14 @@ const AuthScreen = ({ onAuthenticated }: { onAuthenticated: () => void }) => {
               onChange={(event) => setUsername(event.target.value)}
               className="w-full rounded-lg border border-indigo/20 bg-paper px-3 py-2 text-ink focus:outline-none focus:ring-2 focus:ring-cinnabar/40"
               autoComplete="username"
+              minLength={AUTH_RULES.username.minLength}
+              maxLength={AUTH_RULES.username.maxLength}
+              required
               disabled={isLoading}
             />
+            <p className="mt-1 text-xs text-ashes">
+              {`长度 ${AUTH_RULES.username.minLength}-${AUTH_RULES.username.maxLength} 个字符`}
+            </p>
           </div>
 
           <div>
@@ -143,8 +151,14 @@ const AuthScreen = ({ onAuthenticated }: { onAuthenticated: () => void }) => {
               onChange={(event) => setPassword(event.target.value)}
               className="w-full rounded-lg border border-indigo/20 bg-paper px-3 py-2 text-ink focus:outline-none focus:ring-2 focus:ring-cinnabar/40"
               autoComplete="current-password"
+              minLength={AUTH_RULES.password.minLength}
+              maxLength={AUTH_RULES.password.maxLength}
+              required
               disabled={isLoading}
             />
+            <p className="mt-1 text-xs text-ashes">
+              {`长度 ${AUTH_RULES.password.minLength}-${AUTH_RULES.password.maxLength} 个字符`}
+            </p>
           </div>
 
           {error ? <p className="text-sm text-cinnabar">{error}</p> : null}

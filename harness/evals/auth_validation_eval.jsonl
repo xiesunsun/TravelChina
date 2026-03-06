@@ -1,0 +1,3 @@
+{"case_id":"auth_short_password_frontend_block","input":{"username":"root","password":"root","action":"register_and_login"},"expected":{"frontend_blocked":true,"request_sent":false,"ui_message":"密码至少 6 个字符"}}
+{"case_id":"auth_backend_still_strict_on_invalid_payload","input":{"endpoint":"POST /api/v1/auth/register","payload":{"username":"root","password":"root"}},"expected":{"status_code":422,"error_type":"string_too_short","error_field":"password"}}
+{"case_id":"auth_register_login_success_with_valid_input","input":{"username":"valid_user_001","password":"safe-pass-123","action":"register_and_login"},"expected":{"register_status_code":201,"login_status_code":200,"token_present":true}}
