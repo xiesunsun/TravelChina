@@ -3,6 +3,29 @@ import { expect, test } from '@playwright/test';
 const API_BASE_URL = 'http://127.0.0.1:8000/api/v1';
 const AUTH_TOKEN_KEY = 'huixing_auth_token';
 
+test('auth validation: short password is blocked before register request', async ({ page }) => {
+  let registerRequestCount = 0;
+
+  await page.route('**/api/v1/auth/register', async (route) => {
+    registerRequestCount += 1;
+    await route.fulfill({
+      status: 500,
+      contentType: 'application/json',
+      body: JSON.stringify({ detail: 'should not be called' }),
+    });
+  });
+
+  await page.goto('/#/list');
+  await expect(page.getByText('账号登录')).toBeVisible();
+
+  await page.getByTestId('auth-username').fill('root');
+  await page.getByTestId('auth-password').fill('root');
+  await page.getByTestId('auth-register').click();
+
+  await expect(page.getByText('密码至少 6 个字符')).toBeVisible();
+  await expect.poll(() => registerRequestCount).toBe(0);
+});
+
 test('smoke: login -> create -> list -> delete record', async ({ page, request }) => {
   const suffix = `${Date.now()}`;
   const username = `e2e_user_${suffix}`;

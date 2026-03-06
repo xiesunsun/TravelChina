@@ -1,5 +1,6 @@
 import { TravelRecord } from '../types';
 import { BackendRecord, toBackendPayload, toFrontendRecord } from './recordAdapter';
+import { extractApiErrorDetail } from './apiError';
 
 export const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api/v1';
@@ -44,8 +45,9 @@ const parseErrorDetail = async (
 ): Promise<string> => {
   try {
     const data = await response.json();
-    if (typeof data?.detail === 'string' && data.detail.trim()) {
-      return data.detail;
+    const detail = extractApiErrorDetail(data);
+    if (detail) {
+      return detail;
     }
   } catch {
     // keep fallback

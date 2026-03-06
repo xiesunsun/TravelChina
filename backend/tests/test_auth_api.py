@@ -16,6 +16,32 @@ def test_auth_register_and_login(client):
     assert data["access_token"]
 
 
+def test_auth_register_rejects_short_password(client):
+    response = client.post(
+        "/api/v1/auth/register",
+        json={"username": "root", "password": "root"},
+    )
+
+    assert response.status_code == 422
+    detail = response.json()["detail"]
+    assert isinstance(detail, list)
+    assert detail[0]["loc"] == ["body", "password"]
+    assert detail[0]["type"] == "string_too_short"
+
+
+def test_auth_login_rejects_short_password_input(client):
+    response = client.post(
+        "/api/v1/auth/login",
+        json={"username": "root", "password": "root"},
+    )
+
+    assert response.status_code == 422
+    detail = response.json()["detail"]
+    assert isinstance(detail, list)
+    assert detail[0]["loc"] == ["body", "password"]
+    assert detail[0]["type"] == "string_too_short"
+
+
 def test_auth_rejects_bad_password(client):
     client.post(
         "/api/v1/auth/register",
