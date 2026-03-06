@@ -82,6 +82,29 @@ class AIService:
             return AIService.ERROR_FALLBACK_MESSAGE
 
     @staticmethod
+    def probe_live_client() -> tuple[bool, str]:
+        if not settings.has_gemini_api_key():
+            return False, "GEMINI_API_KEY is missing"
+
+        if not client:
+            return False, "Gemini client was not initialized"
+
+        try:
+            response = client.models.generate_content(
+                model="gemini-2.5-flash-lite",
+                contents="Reply with exactly: OK",
+                config=types.GenerateContentConfig(temperature=0),
+            )
+        except Exception as exc:  # pragma: no cover - network/runtime dependent
+            return False, f"Live probe failed: {exc}"
+
+        text = (response.text or "").strip()
+        if not text:
+            return False, "Live probe returned empty text"
+
+        return True, f"Live probe succeeded with response: {text[:60]}"
+
+    @staticmethod
     def resolve_location(location_input: str, region_context: str) -> Dict[str, str]:
         if not client:
             return {"city": "云深不知处", "spot_name": location_input}

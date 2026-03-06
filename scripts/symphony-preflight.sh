@@ -86,6 +86,26 @@ main() {
     has_error=1
   fi
 
+  local enable_runtime_config_check="${SYMPHONY_PREFLIGHT_VALIDATE_RUNTIME_CONFIG:-1}"
+  if [[ "$enable_runtime_config_check" == "1" ]]; then
+    local require_oss_config="${SYMPHONY_PREFLIGHT_REQUIRE_OSS_CONFIG:-0}"
+    local require_llm_key="${SYMPHONY_PREFLIGHT_REQUIRE_GEMINI_API_KEY:-0}"
+    local enable_llm_live_probe="${SYMPHONY_PREFLIGHT_ENABLE_LLM_LIVE_PROBE:-0}"
+
+    if ! (
+      cd backend
+      RUNTIME_VALIDATE_REQUIRE_OSS="$require_oss_config" \
+      RUNTIME_VALIDATE_REQUIRE_LLM_KEY="$require_llm_key" \
+      RUNTIME_VALIDATE_ENABLE_LLM_LIVE_PROBE="$enable_llm_live_probe" \
+      uv run python ../scripts/validate_runtime_config.py
+    ); then
+      fail "Runtime config validation failed." || true
+      has_error=1
+    fi
+  else
+    warn "Skipping runtime config validation (SYMPHONY_PREFLIGHT_VALIDATE_RUNTIME_CONFIG=$enable_runtime_config_check)"
+  fi
+
   if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
     if ! git remote get-url origin >/dev/null 2>&1; then
       fail "Git remote 'origin' is not configured." || true
