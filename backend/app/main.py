@@ -13,6 +13,7 @@ from app.api.v1.endpoints import auth
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     settings.validate_runtime_security()
+    settings.validate_runtime_configuration()
     yield
 
 

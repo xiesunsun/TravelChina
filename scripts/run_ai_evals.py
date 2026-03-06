@@ -54,6 +54,7 @@ def run_case(case: dict[str, Any], run_live: bool) -> dict[str, Any]:
     if run_live:
         live_output = AIService.generate_guidance(ctx, use_live_client=True)
         checks["live_non_empty"] = bool(isinstance(live_output, str) and live_output.strip())
+        checks["live_not_missing_config"] = live_output != AIService.MISSING_CONFIG_MESSAGE
 
     passed = all(bool(value) for value in checks.values())
 
@@ -77,6 +78,12 @@ def main() -> int:
     report_file = ROOT / "harness" / "reports" / "ai_eval_report.json"
 
     run_live = os.getenv("AI_EVAL_ENABLE_LIVE", "0") == "1"
+    live_probe_result: dict[str, Any] | None = None
+    if run_live:
+        ok, detail = AIService.probe_live_client()
+        live_probe_result = {"enabled": True, "passed": ok, "detail": detail}
+    else:
+        live_probe_result = {"enabled": False, "passed": True, "detail": "disabled"}
 
     cases = []
     with eval_file.open("r", encoding="utf-8") as handle:
@@ -93,6 +100,7 @@ def main() -> int:
     report = {
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "mode": "live+offline" if run_live else "offline-only",
+        "live_probe": live_probe_result,
         "summary": {
             "total": len(results),
             "passed": passed,
@@ -105,10 +113,13 @@ def main() -> int:
     report_file.parent.mkdir(parents=True, exist_ok=True)
     report_file.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
 
-    print(f"[ai-eval] mode={report['mode']} total={len(results)} passed={passed} failed={failed}")
+    print(
+        f"[ai-eval] mode={report['mode']} total={len(results)} "
+        f"passed={passed} failed={failed} live_probe={live_probe_result}"
+    )
     print(f"[ai-eval] report={report_file}")
 
-    return 1 if failed else 0
+    return 1 if failed or not live_probe_result["passed"] else 0
 
 
 if __name__ == "__main__":

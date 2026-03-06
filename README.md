@@ -43,6 +43,8 @@ uv run uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
 - `JWT_SECRET_KEY`
 - `GEMINI_API_KEY`（可选，不配会走回退文案）
 - `ALIYUN_*`（图片上传到 OSS 时需要）
+- `REQUIRE_OSS_CONFIG`（默认 `false`，设为 `true` 时启动即强制校验 OSS 完整配置）
+- `REQUIRE_GEMINI_API_KEY`（默认 `false`，设为 `true` 时启动即要求 `GEMINI_API_KEY`）
 
 ### 2) 启动前端
 
@@ -71,17 +73,32 @@ bash scripts/run-harness.sh
 1. 生成工件（OpenAPI + DB schema）
 2. docs lint
 3. architecture lint
-4. AI eval
-5. backend tests
-6. frontend unit tests
-7. frontend build
-8. frontend e2e smoke
+4. runtime config checks（离线、可复现）
+5. AI eval
+6. backend tests
+7. frontend unit tests
+8. frontend build
+9. frontend e2e smoke
 
 仅跳过 e2e：
 
 ```bash
 HARNESS_SKIP_E2E=1 bash scripts/run-harness.sh
 ```
+
+单独执行配置校验：
+
+```bash
+cd backend
+uv run python ../scripts/validate_runtime_config.py
+```
+
+可选开关：
+
+- `RUNTIME_VALIDATE_REQUIRE_OSS=1`：要求 OSS 配置完整，否则失败。
+- `RUNTIME_VALIDATE_REQUIRE_LLM_KEY=1`：要求 `GEMINI_API_KEY` 已配置，否则失败。
+- `RUNTIME_VALIDATE_ENABLE_LLM_LIVE_PROBE=1`：启用在线 LLM 探测（手动验证用）。
+- `AI_EVAL_ENABLE_LIVE=1`：同时开启 AI eval 的 live 模式（默认离线）。
 
 常用单项命令：
 

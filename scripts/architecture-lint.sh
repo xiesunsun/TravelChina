@@ -45,6 +45,11 @@ if ! grep -q "validate_runtime_security" "$main_file"; then
   exit 1
 fi
 
+if ! grep -q "validate_runtime_configuration" "$main_file"; then
+  echo "[arch-lint] FastAPI startup must enforce runtime config validation"
+  exit 1
+fi
+
 if ! grep -q "ENVIRONMENT" "$backend_config_file"; then
   echo "[arch-lint] Settings must define ENVIRONMENT for runtime guardrails"
   exit 1

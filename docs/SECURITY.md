@@ -7,7 +7,8 @@
 
 ## V0 Mitigations
 - Keep secrets in `.env` and out of git.
-- Fail fast with explicit config validation for OSS upload path.
+- Fail fast with explicit config validation for OSS upload path (presence + basic format).
+- Optional strict startup/preflight checks for `GEMINI_API_KEY` and OSS readiness.
 - Records API now requires JWT bearer token and rejects anonymous requests.
 - Frontend switched to explicit login/register flow; removed auto account bootstrap.
 - Backend adds startup guard: production/staging must not use default JWT secret.
