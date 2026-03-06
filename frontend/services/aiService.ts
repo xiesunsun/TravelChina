@@ -10,14 +10,6 @@ interface QuestionContext {
   weather?: string;
 }
 
-interface ExtractionResult {
-  city?: string;
-  spot_name?: string;
-  travel_date?: string;
-  weather?: string;
-  ai_tags?: string[];
-}
-
 // Fallback messages: Modern, warm, friendly
 const FALLBACK_MESSAGES: Record<QuestionType, string[]> = {
   location: [

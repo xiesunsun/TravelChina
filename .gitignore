@@ -18,10 +18,14 @@ node_modules
 dist
 dist-ssr
 *.local
+playwright-report/
+test-results/
+harness/reports/*.json
 #backend
 __pycache__/
 *.py[cod]
 *$py.class
+*.db
 # virtual env
 venv/
 env/

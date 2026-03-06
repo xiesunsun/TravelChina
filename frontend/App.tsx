@@ -1,14 +1,23 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { HashRouter, Routes, Route, Navigate, useLocation, Link } from 'react-router-dom';
 import InkMap from './components/InkMap';
 import ScrollList from './components/ScrollList';
 import RecordModal from './components/RecordModal';
 import { TravelRecord } from './types';
-import { fetchRecords, createRecord, updateRecord, uploadImage, deleteRecord } from './services/apiService';
-import { MapPin, ScrollText } from 'lucide-react';
+import {
+  fetchRecords,
+  createRecord,
+  updateRecord,
+  deleteRecord,
+  login as loginWithPassword,
+  registerAndLogin,
+  logout,
+  hasAuthToken,
+  AuthRequiredError,
+} from './services/apiService';
+import { LogOut, MapPin, ScrollText } from 'lucide-react';
 
-const Navigation = () => {
+const Navigation = ({ onLogout }: { onLogout: () => void }) => {
   const location = useLocation();
 
   const isActive = (path: string) => location.pathname === path;
@@ -32,6 +41,15 @@ const Navigation = () => {
           <ScrollText size={18} strokeWidth={1.5} />
           <span className="text-sm font-bold font-serif tracking-widest">画卷</span>
         </Link>
+
+        <button
+          type="button"
+          onClick={onLogout}
+          className="flex items-center gap-2 px-4 py-2 rounded-full transition-all duration-500 border bg-paper/80 text-ink border-indigo/20 hover:bg-indigo/5 hover:border-indigo/40"
+        >
+          <LogOut size={16} strokeWidth={1.5} />
+          <span className="text-sm font-bold font-serif tracking-widest">退出</span>
+        </button>
       </div>
     </nav>
   );
@@ -53,39 +71,166 @@ const Header = () => (
   </header>
 );
 
+const AuthScreen = ({ onAuthenticated }: { onAuthenticated: () => void }) => {
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  const submit = async (mode: 'login' | 'register'): Promise<void> => {
+    const trimmedUser = username.trim();
+    if (!trimmedUser || !password) {
+      setError('请输入用户名和密码');
+      return;
+    }
+
+    setIsLoading(true);
+    setError('');
+    try {
+      if (mode === 'register') {
+        await registerAndLogin({ username: trimmedUser, password });
+      } else {
+        await loginWithPassword({ username: trimmedUser, password });
+      }
+      onAuthenticated();
+    } catch (authError) {
+      console.error('Auth failed:', authError);
+      setError(authError instanceof Error ? authError.message : '认证失败，请稍后重试');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <div className="relative w-full h-screen overflow-hidden flex items-center justify-center px-6">
+      <Header />
+      <div className="w-full max-w-md rounded-2xl border border-indigo/20 bg-paper/90 shadow-xl p-8 backdrop-blur-sm">
+        <h2 className="text-2xl font-serif tracking-widest text-ink mb-2">账号登录</h2>
+        <p className="text-sm text-ashes mb-6">登录后可同步你的旅行足迹。</p>
+
+        <form
+          className="space-y-4"
+          onSubmit={(event) => {
+            event.preventDefault();
+            void submit('login');
+          }}
+        >
+          <div>
+            <label htmlFor="auth-username" className="block text-sm text-ashes mb-1">
+              用户名
+            </label>
+            <input
+              id="auth-username"
+              data-testid="auth-username"
+              type="text"
+              value={username}
+              onChange={(event) => setUsername(event.target.value)}
+              className="w-full rounded-lg border border-indigo/20 bg-paper px-3 py-2 text-ink focus:outline-none focus:ring-2 focus:ring-cinnabar/40"
+              autoComplete="username"
+              disabled={isLoading}
+            />
+          </div>
+
+          <div>
+            <label htmlFor="auth-password" className="block text-sm text-ashes mb-1">
+              密码
+            </label>
+            <input
+              id="auth-password"
+              data-testid="auth-password"
+              type="password"
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+              className="w-full rounded-lg border border-indigo/20 bg-paper px-3 py-2 text-ink focus:outline-none focus:ring-2 focus:ring-cinnabar/40"
+              autoComplete="current-password"
+              disabled={isLoading}
+            />
+          </div>
+
+          {error ? <p className="text-sm text-cinnabar">{error}</p> : null}
+
+          <div className="grid grid-cols-2 gap-3 pt-2">
+            <button
+              data-testid="auth-login"
+              type="submit"
+              disabled={isLoading}
+              className="rounded-lg border border-indigo/20 bg-indigo text-paper px-4 py-2 hover:opacity-90 disabled:opacity-60"
+            >
+              登录
+            </button>
+            <button
+              data-testid="auth-register"
+              type="button"
+              disabled={isLoading}
+              onClick={() => {
+                void submit('register');
+              }}
+              className="rounded-lg border border-cinnabar/30 bg-cinnabar text-paper px-4 py-2 hover:opacity-90 disabled:opacity-60"
+            >
+              注册并登录
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+};
+
 const AppContent = () => {
   const [records, setRecords] = useState<TravelRecord[]>([]);
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(hasAuthToken());
+  const [isLoadingRecords, setIsLoadingRecords] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedLocation, setSelectedLocation] = useState('');
   const [selectedRecords, setSelectedRecords] = useState<TravelRecord[]>([]);
   const [isFirstVisit, setIsFirstVisit] = useState(true);
 
-  useEffect(() => {
-    const initData = async () => {
+  const handleLogout = useCallback(() => {
+    logout();
+    setIsAuthenticated(false);
+    setRecords([]);
+    setIsModalOpen(false);
+    setSelectedLocation('');
+    setSelectedRecords([]);
+  }, []);
+
+  const loadRecords = useCallback(async () => {
+    setIsLoadingRecords(true);
+    try {
       const apiData = await fetchRecords();
       setRecords(apiData);
-    };
-    initData();
-  }, []);
+    } catch (error) {
+      if (error instanceof AuthRequiredError) {
+        handleLogout();
+        return;
+      }
+      console.error('Failed to load records:', error);
+      alert('加载足迹失败，请稍后重试');
+    } finally {
+      setIsLoadingRecords(false);
+    }
+  }, [handleLogout]);
+
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    void loadRecords();
+  }, [isAuthenticated, loadRecords]);
 
   const handleSaveRecord = async (record: TravelRecord) => {
     try {
-      // Check if this is an update or a new record
-      const existingIndex = records.findIndex(r => r.id === record.id);
+      const existingIndex = records.findIndex((r) => r.id === record.id);
 
       if (existingIndex >= 0) {
-        // Update existing
         const updatedRecord = await updateRecord(record.id, record);
-        setRecords(prev => {
+        setRecords((prev) => {
           const newRecords = [...prev];
           newRecords[existingIndex] = updatedRecord;
           return newRecords;
         });
 
-        // Update selectedRecords if relevant
         if (selectedLocation === updatedRecord.region) {
-          setSelectedRecords(prev => {
-            const idx = prev.findIndex(r => r.id === updatedRecord.id);
+          setSelectedRecords((prev) => {
+            const idx = prev.findIndex((r) => r.id === updatedRecord.id);
             if (idx >= 0) {
               const newSelected = [...prev];
               newSelected[idx] = updatedRecord;
@@ -95,52 +240,69 @@ const AppContent = () => {
           });
         }
       } else {
-        // Create new
         const newRecord = await createRecord(record);
-        setRecords(prev => [newRecord, ...prev]);
+        setRecords((prev) => [newRecord, ...prev]);
 
-        // Update selectedRecords if relevant
         if (selectedLocation === newRecord.region) {
-          setSelectedRecords(prev => [newRecord, ...prev]);
+          setSelectedRecords((prev) => [newRecord, ...prev]);
         }
       }
 
       setIsModalOpen(false);
       setSelectedLocation('');
     } catch (error) {
-      console.error("Failed to save:", error);
-      alert("保存失败，请重试");
+      if (error instanceof AuthRequiredError) {
+        handleLogout();
+        return;
+      }
+      console.error('Failed to save:', error);
+      alert('保存失败，请重试');
     }
   };
 
   const handleDeleteRecord = async (id: string) => {
     try {
       await deleteRecord(id);
-      setRecords(prev => prev.filter(r => r.id !== id));
-      setSelectedRecords(prev => prev.filter(r => r.id !== id));
+      setRecords((prev) => prev.filter((r) => r.id !== id));
+      setSelectedRecords((prev) => prev.filter((r) => r.id !== id));
     } catch (error) {
-      console.error("Failed to delete:", error);
-      alert("删除失败，请重试");
+      if (error instanceof AuthRequiredError) {
+        handleLogout();
+        return;
+      }
+      console.error('Failed to delete:', error);
+      alert('删除失败，请重试');
     }
   };
 
-  const handleMapClick = useCallback((locationName: string) => {
-    // Check if this region already has records
-    const existingRecords = records.filter(r => r.region === locationName);
-    const hasVisited = existingRecords.length > 0;
+  const handleMapClick = useCallback(
+    (locationName: string) => {
+      const existingRecords = records.filter((r) => r.region === locationName);
+      const hasVisited = existingRecords.length > 0;
 
-    setIsFirstVisit(!hasVisited);
-    setSelectedLocation(locationName);
-    setSelectedRecords(existingRecords);
-    setIsModalOpen(true);
-  }, [records]);
+      setIsFirstVisit(!hasVisited);
+      setSelectedLocation(locationName);
+      setSelectedRecords(existingRecords);
+      setIsModalOpen(true);
+    },
+    [records],
+  );
+
+  if (!isAuthenticated) {
+    return <AuthScreen onAuthenticated={() => setIsAuthenticated(true)} />;
+  }
 
   return (
     <div className="relative w-full h-screen overflow-hidden flex flex-col">
       <Header />
-      <Navigation />
+      <Navigation onLogout={handleLogout} />
 
       <main className="flex-1 relative">
+        {isLoadingRecords ? (
+          <div className="absolute inset-0 z-30 flex items-center justify-center text-ashes text-sm tracking-widest font-serif">
+            正在载入足迹...
+          </div>
+        ) : null}
         <Routes>
           <Route path="/" element={<InkMap records={records} onMapClick={handleMapClick} />} />
           <Route path="/list" element={<ScrollList records={records} />} />

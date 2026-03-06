@@ -1,6 +1,7 @@
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_db
@@ -25,7 +26,11 @@ def register(payload: RegisterRequest, db: Session = Depends(get_db)):
         is_active=True,
     )
     db.add(user)
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError as exc:
+        db.rollback()
+        raise HTTPException(status_code=409, detail="Username already exists") from exc
     db.refresh(user)
     return UserRead(id=user.id, username=user.username)
 

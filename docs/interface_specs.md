@@ -8,6 +8,8 @@
 - 后端接口前缀：`/api/v1/*`
 - 鉴权方式：JWT Bearer Token
 - 数据库：SQLite（SQLAlchemy + Alembic）
+- 前端 API 基址：`VITE_API_BASE_URL`（未设置时默认 `http://localhost:8000/api/v1`）
+- 前端鉴权入口：显式登录页（用户名+密码）；不再自动创建本地账号
 
 ## 2. 前端核心数据模型（TravelRecord）
 
@@ -62,6 +64,8 @@ interface TravelRecord {
   "token_type": "bearer"
 }
 ```
+
+前端会将 `access_token` 存入本地存储并在后续请求中通过 `Authorization: Bearer <token>` 发送。
 
 ### 4.2 足迹记录
 - `GET /api/v1/records/`

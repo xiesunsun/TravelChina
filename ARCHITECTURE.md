@@ -17,6 +17,7 @@
 - New backend endpoints must be under `/api/v1/*`.
 - AI calls must be wrapped by backend service classes.
 - Every behavior-changing PR must have a runnable verification path.
+- Frontend authentication must use explicit login/register flow (no silent account bootstrap).
 
 ## Runtime Contracts
 - Frontend adapter maps backend schema to UI schema.

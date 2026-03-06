@@ -1,8 +1,8 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
+from app.core.config import settings
 
-# 后面我们会把这个硬编码改为从 .env 读取
-SQLALCHEMY_DATABASE_URL = "sqlite:///./huixing.db"
+SQLALCHEMY_DATABASE_URL = settings.SQLALCHEMY_DATABASE_URL
 
 engine = create_engine(
     SQLALCHEMY_DATABASE_URL, 
