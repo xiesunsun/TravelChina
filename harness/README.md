@@ -7,3 +7,7 @@
 
 Run all v0 checks with:
 - `bash scripts/run-harness.sh`
+
+AI eval notes:
+- Default mode is deterministic offline assertions (no external model dependency).
+- Optional live probe can be enabled with `AI_EVAL_ENABLE_LIVE=1`.

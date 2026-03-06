@@ -94,6 +94,14 @@ cd frontend && npm test
 cd frontend && npm run test:e2e
 ```
 
+## Symphony Agent 工作流
+
+- 仓库内 `WORKFLOW.md` 为 Symphony 的执行策略契约（状态流转、验证门禁、交接规则）。
+- 建议从仓库根目录启动 Symphony，确保默认能读取到 `./WORKFLOW.md`。
+- 工单进入 `Human Review` 前，默认必须通过 `bash scripts/run-harness.sh`。
+- 每次 unattended 运行前会执行 `bash scripts/symphony-preflight.sh` 做工具/鉴权/仓库结构预检。
+- 如需临时放宽 GitHub CLI 检查，可设置 `SYMPHONY_PREFLIGHT_REQUIRE_GH=0`（不建议长期使用）。
+
 ## 开发约定
 
 - 行为变更必须同步更新 `docs/`
@@ -105,4 +113,3 @@ cd frontend && npm run test:e2e
 
 - `AGENTS.md`
 - `ARCHITECTURE.md`
-

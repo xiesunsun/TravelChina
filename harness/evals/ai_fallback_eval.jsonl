@@ -1,2 +1,3 @@
-{"case_id":"location_fallback","input":{"type":"location","context":{"region":"浙江省"}},"expected":{"non_empty":true}}
-{"case_id":"description_fallback","input":{"type":"description","context":{"city":"杭州"}},"expected":{"non_empty":true}}
+{"case_id":"location_prompt_and_offline_fallback","input":{"type":"location","context":{"region":"浙江省"}},"expected":{"prompt_contains_all":["浙江省","城市","景点"],"offline_response":"AI 服务未配置，请检查 API Key。"}}
+{"case_id":"description_prompt_and_offline_fallback","input":{"type":"description","context":{"city":"杭州"}},"expected":{"prompt_contains_all":["随笔"],"offline_response":"AI 服务未配置，请检查 API Key。"}}
+{"case_id":"weather_prompt_with_placeholder_date","input":{"type":"weather","context":{"city":"杭州","date":"1000-01-01"}},"expected":{"prompt_contains_all":["那段时间","杭州"],"offline_response":"AI 服务未配置，请检查 API Key。"}}

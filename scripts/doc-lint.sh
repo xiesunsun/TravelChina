@@ -5,10 +5,12 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
 required=(
+  "WORKFLOW.md"
   "AGENTS.md"
   "ARCHITECTURE.md"
   "docs/index.md"
   "docs/design-docs/harness-v0.md"
+  "docs/design-docs/symphony-workflow-v1.md"
   "docs/product-specs/index.md"
   "docs/exec-plans/active/harness-v0-rollout.md"
   "docs/generated/openapi.json"
@@ -17,6 +19,7 @@ required=(
   "docs/RELIABILITY.md"
   "docs/SECURITY.md"
   "harness/README.md"
+  "scripts/symphony-preflight.sh"
 )
 
 for file in "${required[@]}"; do
@@ -43,6 +46,11 @@ fi
 
 if ! contains "Invariants" ARCHITECTURE.md; then
   echo "[doc-lint] ARCHITECTURE.md must contain invariants section"
+  exit 1
+fi
+
+if ! contains "before_run" WORKFLOW.md; then
+  echo "[doc-lint] WORKFLOW.md must define hooks.before_run preflight"
   exit 1
 fi
 

@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 import json
+import os
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Any
 
 ROOT = Path(__file__).resolve().parents[1]
 BACKEND_DIR = ROOT / "backend"
@@ -11,29 +13,62 @@ sys.path.insert(0, str(BACKEND_DIR))
 from app.services.ai_service import AIService, QuestionContext  # noqa: E402
 
 
-def run_case(case: dict) -> dict:
+def _contains_all(text: str, tokens: list[str]) -> bool:
+    return all(token in text for token in tokens)
+
+
+def _contains_none(text: str, tokens: list[str]) -> bool:
+    return all(token not in text for token in tokens)
+
+
+def run_case(case: dict[str, Any], run_live: bool) -> dict[str, Any]:
     case_id = case.get("case_id", "unknown")
     payload = case.get("input", {})
-    question_type = payload.get("type")
-    context = payload.get("context", {})
     expected = case.get("expected", {})
 
+    context = payload.get("context", {})
+    question_type = payload.get("type")
     ctx = QuestionContext(step=question_type or "location", **context)
-    output = AIService.generate_guidance(ctx)
 
-    checks = {}
-    checks["non_empty"] = bool(isinstance(output, str) and output.strip())
+    prompt = AIService.build_guidance_prompt(ctx)
+    offline_output = AIService.generate_guidance(ctx, use_live_client=False)
 
-    passed = True
-    if expected.get("non_empty"):
-        passed = passed and checks["non_empty"]
+    checks: dict[str, Any] = {
+        "prompt_non_empty": bool(prompt.strip()),
+        "offline_non_empty": bool(isinstance(offline_output, str) and offline_output.strip()),
+    }
+
+    contains_all = expected.get("prompt_contains_all", [])
+    if contains_all:
+        checks["prompt_contains_all"] = _contains_all(prompt, contains_all)
+
+    contains_none = expected.get("prompt_contains_none", [])
+    if contains_none:
+        checks["prompt_contains_none"] = _contains_none(prompt, contains_none)
+
+    offline_equals = expected.get("offline_response")
+    if isinstance(offline_equals, str):
+        checks["offline_response_exact"] = offline_output == offline_equals
+
+    live_output = None
+    if run_live:
+        live_output = AIService.generate_guidance(ctx, use_live_client=True)
+        checks["live_non_empty"] = bool(isinstance(live_output, str) and live_output.strip())
+
+    passed = all(bool(value) for value in checks.values())
 
     return {
         "case_id": case_id,
         "passed": passed,
-        "expected": expected,
         "checks": checks,
-        "output_preview": output[:120] if isinstance(output, str) else str(output),
+        "input": payload,
+        "preview": {
+            "prompt": prompt[:120],
+            "offline_output": offline_output[:120]
+            if isinstance(offline_output, str)
+            else str(offline_output),
+            "live_output": (live_output[:120] if isinstance(live_output, str) else None),
+        },
     }
 
 
@@ -41,20 +76,23 @@ def main() -> int:
     eval_file = ROOT / "harness" / "evals" / "ai_fallback_eval.jsonl"
     report_file = ROOT / "harness" / "reports" / "ai_eval_report.json"
 
+    run_live = os.getenv("AI_EVAL_ENABLE_LIVE", "0") == "1"
+
     cases = []
-    with eval_file.open("r", encoding="utf-8") as f:
-        for line in f:
+    with eval_file.open("r", encoding="utf-8") as handle:
+        for line in handle:
             line = line.strip()
             if not line:
                 continue
             cases.append(json.loads(line))
 
-    results = [run_case(case) for case in cases]
-    passed = sum(1 for r in results if r["passed"])
+    results = [run_case(case, run_live=run_live) for case in cases]
+    passed = sum(1 for item in results if item["passed"])
     failed = len(results) - passed
 
     report = {
         "generated_at": datetime.now(timezone.utc).isoformat(),
+        "mode": "live+offline" if run_live else "offline-only",
         "summary": {
             "total": len(results),
             "passed": passed,
@@ -67,7 +105,7 @@ def main() -> int:
     report_file.parent.mkdir(parents=True, exist_ok=True)
     report_file.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
 
-    print(f"[ai-eval] total={len(results)} passed={passed} failed={failed}")
+    print(f"[ai-eval] mode={report['mode']} total={len(results)} passed={passed} failed={failed}")
     print(f"[ai-eval] report={report_file}")
 
     return 1 if failed else 0
